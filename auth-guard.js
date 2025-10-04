@@ -1,9 +1,4 @@
 
-/**
- * auth-guard.js
- * 前端用的保護鎖系統：檢查登入與購買狀態。
- * 注意：這只是前端顯示用，不能防盜版。
- */
 (function(global){
   function getUser(){
     try{
@@ -25,24 +20,19 @@
       needLogin=false,
       needBuyer=false,
       needPaperOwner=false,
-      loginUrl="login.html",
-      certifyUrl="witness.html",
       onBlocked
     } = opts || {};
 
     if(needLogin && !isLoggedIn()){
       onBlocked && onBlocked("not_logged_in");
-      location.href = loginUrl;
       return false;
     }
     if(needBuyer && !isBuyer()){
       onBlocked && onBlocked("not_buyer");
-      location.href = "main.html";
       return false;
     }
     if(needPaperOwner && !isPaperOwner()){
       onBlocked && onBlocked("not_paper_owner");
-      location.href = certifyUrl;
       return false;
     }
     return true;
@@ -72,7 +62,7 @@
     if(state==="not_logged_in"){
       h.textContent = "這裡的舞台仍然緊閉……";
       const btn = document.createElement("a");
-      btn.href = "login.html";
+      btn.href = "main.html";
       btn.textContent = "回到首頁登入並購買";
       btn.style.cssText = "display:inline-block;margin-top:12px;border:1px solid #ff8844;padding:8px 14px;border-radius:10px;text-decoration:none;color:#ffbb88";
       p.appendChild(btn);

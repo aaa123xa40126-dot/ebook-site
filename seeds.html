@@ -402,5 +402,18 @@ nav a:hover{color:#ff6600;text-shadow:0 0 6px rgba(255,100,0,.6)}
   });
 </script>
 
+
+<script src="auth-guard.js"></script>
+<script>
+  Auth.routeGuard({
+    needLogin: true,
+    needBuyer: true,
+    onBlocked: (reason) => {
+      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
+      else if (reason === "not_buyer") Auth.mountOverlay("not_buyer");
+    }
+  });
+</script>
+
 </body>
 </html>

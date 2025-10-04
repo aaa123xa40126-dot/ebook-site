@@ -111,5 +111,16 @@
 
   runDialog();
 </script>
+
+<script src="auth-guard.js"></script>
+<script>
+  Auth.routeGuard({
+    needLogin: true,
+    onBlocked: () => {
+      Auth.mountOverlay("not_logged_in");
+    }
+  });
+</script>
+
 </body>
 </html>
