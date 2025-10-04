@@ -1,0 +1,98 @@
+
+/* firelock.css — 魔法式圓環封印（半透明） */
+:root{ --fl-orange:#ffb86b; --fl-orange2:#ff8c1a; --fl-gold:#ffdca8; }
+
+@media (prefers-reduced-motion:no-preference){
+  .fl-spin-slow { animation: fl-rotate 18s linear infinite; }
+  .fl-spin-mid  { animation: fl-rotate 12s linear infinite reverse; }
+  .fl-fade      { animation: fl-fade 2s ease forwards; }
+  .fl-embers    { animation: fl-embers 6s ease-in-out infinite alternate; }
+}
+@keyframes fl-rotate{ from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes fl-fade{ from{opacity:0} to{opacity:1} }
+@keyframes fl-embers{
+  0% { transform: translateY(0px); opacity:.35; }
+  100%{ transform: translateY(-10px); opacity:.85; }
+}
+
+.firelock-overlay{
+  position:fixed; inset:0; z-index:99999;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'DFKai-SB','標楷體','Times New Roman',Times,serif;
+  color:var(--fl-orange);
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing:.5px;
+}
+
+.firelock-stage{
+  position:relative; width:min(780px,92%); aspect-ratio: 16 / 10;
+  border:1px solid color-mix(in oklab, var(--fl-orange), #000 40%);
+  border-radius:16px;
+  padding:20px; box-shadow: 0 0 28px rgba(255,184,107,.12) inset;
+  background: radial-gradient(120% 120% at 50% 50%, rgba(255,200,120,.08) 0%, rgba(0,0,0,.2) 50%, rgba(0,0,0,.35) 100%);
+}
+
+/* 魔法圓環（兩層） */
+.firelock-ring, .firelock-ring2{
+  position:absolute; inset:0; border-radius:18px; pointer-events:none;
+  mask: radial-gradient(closest-side, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 62%, rgba(0,0,0,1) 100%);
+  -webkit-mask: radial-gradient(closest-side, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 62%, rgba(0,0,0,1) 100%);
+}
+.firelock-ring{
+  background:
+    conic-gradient(from 0deg, rgba(255,184,107,.0) 0 10%, rgba(255,184,107,.7) 12%, rgba(255,220,168,.35) 18%, rgba(255,184,107,.0) 22%),
+    conic-gradient(from 90deg, rgba(255,184,107,.0) 0 14%, rgba(255,184,107,.6) 16%, rgba(255,220,168,.3) 22%, rgba(255,184,107,.0) 26%);
+  filter: drop-shadow(0 0 10px rgba(255,184,107,.55));
+}
+.firelock-ring2{
+  background:
+    conic-gradient(from 45deg, rgba(255,220,168,.0) 0 8%, rgba(255,220,168,.55) 9%, rgba(255,184,107,.25) 14%, rgba(255,220,168,.0) 18%),
+    conic-gradient(from 180deg, rgba(255,184,107,.0) 0 10%, rgba(255,184,107,.5) 12%, rgba(255,220,168,.2) 18%, rgba(255,184,107,.0) 22%);
+  filter: drop-shadow(0 0 8px rgba(255,184,107,.45));
+}
+
+/* 鎖鍊感的細節（斷續鏈紋） */
+.firelock-chain{
+  position:absolute; inset:7%; border-radius:14px; pointer-events:none;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255,184,107,.0) 0 8deg, rgba(255,184,107,.7) 10deg 12deg, rgba(255,184,107,.0) 14deg 18deg);
+  mask: radial-gradient(closest-side, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 57%, rgba(0,0,0,1) 100%);
+  -webkit-mask: radial-gradient(closest-side, rgba(0,0,0,0) 55%, rgba(0,0,0,1) 57%, rgba(0,0,0,1) 100%);
+  opacity:.55; filter: blur(.2px) drop-shadow(0 0 6px rgba(255,184,107,.35));
+}
+
+/* 火星 */
+.firelock-embers{
+  position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(2px 2px at 20% 30%, rgba(255,240,210,.8), rgba(255,184,107,.0)),
+    radial-gradient(2px 2px at 65% 40%, rgba(255,230,180,.8), rgba(255,184,107,.0)),
+    radial-gradient(2px 2px at 35% 70%, rgba(255,210,140,.8), rgba(255,184,107,.0)),
+    radial-gradient(2px 2px at 80% 65%, rgba(255,200,120,.8), rgba(255,184,107,.0));
+  opacity:.7;
+}
+
+/* 文字與按鈕 */
+.firelock-center{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:18px; text-align:center;
+  padding: 0 18px;
+}
+.firelock-title{
+  font-size: clamp(18px, 2.2vw, 28px);
+  color: var(--fl-orange2);
+  text-shadow: 0 0 12px rgba(255,184,107,.35);
+}
+.firelock-actions{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px; }
+.firelock-btn{
+  display:inline-block; padding:10px 18px; border-radius:12px;
+  border:1px solid var(--fl-orange); color:var(--fl-orange);
+  text-decoration:none; cursor:pointer; transition:.2s;
+  background: rgba(0,0,0,.25);
+}
+.firelock-btn:hover{
+  color: var(--fl-gold);
+  box-shadow: 0 0 16px rgba(255,184,107,.6), inset 0 0 8px rgba(255,184,107,.25);
+}
