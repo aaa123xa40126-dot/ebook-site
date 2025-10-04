@@ -457,5 +457,6 @@ function findBlockTimeByEmail(email){ const logs=readLogs(); const item=logs.fin
 function findBlockReasonByEmail(email){ const logs=readLogs(); const item=logs.find(l=> (l.type==='block' || l.type==='delete') && l.email===email ); if(!item) return ''; const m=item.message.split('｜原因：'); return m[1]||''; }
 function findBlockTimeByFP(fp){ const logs=readLogs(); const item=logs.find(l=> l.message.includes(fp.slice(0,8)) ); return item?item.time:''; }
 </script>
+  <script type="module" src="firebase-init.js"></script>
 </body>
 </html>
