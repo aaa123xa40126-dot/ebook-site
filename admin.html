@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理員後台</title>
+<style>
+
+:root{--orange:#ff6600;--orange-dark:#cc5200;--red:#e63946;--red-dark:#c82333;--green:#2e7d32;--gray:#6c757d;--bg:#f8f9fa;--card:#ffffff;--border:#ddd;}
+*{box-sizing:border-box;font-family:'標楷體','Times New Roman',serif;}
+body{margin:0;background:var(--bg);color:#222;}
+header{background:var(--orange);color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;}
+header .right button{background:#fff;color:var(--orange);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;}
+header .right button:hover{background:#ffe0cc;}
+.container{padding:16px;max-width:1200px;margin:0 auto;}
+.btn{padding:8px 12px;border:none;border-radius:8px;cursor:pointer;}
+.btn-orange{background:var(--orange);color:#fff}.btn-orange:hover{background:var(--orange-dark)}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{background:var(--red-dark)}
+.btn-gray{background:#e9ecef}.btn-gray:hover{background:#dfe4ea}
+input,select{padding:8px;border:1px solid var(--border);border-radius:8px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.small{font-size:.9rem;color:#555}
+.warn{color:var(--red)}
+.ok{color:var(--green)}
+
+.nav{display:flex;gap:8px;margin:10px 0}
+.nav .tab{padding:8px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:#fff}
+.nav .tab.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);padding:10px;border:1px solid var(--border);border-radius:10px}
+.spacer{flex:1 1 auto}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:12px 0}
+.panel-header{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.panel-body{padding:12px}
+
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+thead th{background:var(--orange);color:#fff;padding:8px;text-align:center;position:sticky;top:0}
+tbody td{border-top:1px solid var(--border);padding:8px;text-align:center}
+th.sortable{cursor:pointer}
+.row-dup{background:#fff1f1} /* 同指紋多帳號標紅 */
+
+.status-badge{display:inline-block;padding:2px 8px;border-radius:999px;color:#fff;font-size:.9rem}
+.status-ok{background:var(--green)}
+.status-blocked{background:#9e9e9e}
+
+.logs{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;max-height:220px;overflow:auto}
+.logs ul{list-style:none;margin:0;padding:0}
+.logs li{padding:6px 4px;border-bottom:1px dashed #eee}
+
+.danger{background:#fff1f1;border:1px solid #ffb3b3;color:#8b0000;padding:12px;border-radius:10px;margin-top:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="left">管理員後台</div>
+  <div class="right">
+    <span id="adminInfo"></span>
+    <button class="btn" onclick="logoutAdmin()">登出</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- 分頁切換 -->
+  <div class="nav">
+    <div class="tab active" id="tab-users" onclick="switchTab('users')">買家管理</div>
+    <div class="tab" id="tab-blocks" onclick="switchTab('blocks')">封鎖清單管理</div>
+  </div>
+
+  <!-- 買家管理頁 -->
+  <div id="page-users">
+    <div class="toolbar">
+      <input id="kw" type="text" placeholder="搜尋暱稱、Email 或指紋">
+      <label><input id="onlyBlocked" type="checkbox">只看封鎖中</label>
+      <label>日期篩選
+        <select id="dateFilter">
+          <option value="all">全部</option>
+          <option value="today">今天</option>
+          <option value="7d">近 7 天</option>
+        </select>
+      </label>
+      <div class="spacer"></div>
+      <input id="csvInput" type="file" accept=".csv">
+      <button class="btn btn-gray" onclick="importCSV()">匯入 CSV</button>
+      <button class="btn btn-orange" onclick="downloadCSV()">下載 CSV</button>
+      <button class="btn btn-gray" onclick="exportBackup()">匯出備份</button>
+      <input id="backupInput" type="file" accept=".json">
+      <button class="btn btn-gray" onclick="importBackup()">匯入還原</button>
+      <button class="btn btn-orange" onclick="batchBlock()">批次封鎖</button>
+      <button class="btn btn-red" onclick="batchDelete()">批次刪除</button>
+    </div>
+
+    <div class="panel" id="statsPanel">
+      <div class="panel-header">
+        <h3>統計概覽</h3>
+        <button class="btn btn-gray" onclick="togglePanel()">收合/展開</button>
+      </div>
+      <div class="panel-body" id="statsBody">
+        <div class="card" style="margin-bottom:10px">
+          <span>總人數：<b id="statTotal">0</b></span>　
+          <span>封鎖人數：<b id="statBlocked">0</b></span>　
+          <span>正常人數：<b id="statActive">0</b></span>　
+          <span>今日新增：<b id="statToday">0</b></span>
+        </div>
+        <canvas id="trend" width="1100" height="220"></canvas>
+        <div id="anomaly" class="card" style="margin-top:10px;display:none"></div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th><input id="selectAll" type="checkbox"></th>
+          <th class="sortable" onclick="sortTable('nickname')">暱稱</th>
+          <th class="sortable" onclick="sortTable('email')">Email</th>
+          <th class="sortable" onclick="sortTable('date')">註冊時間</th>
+          <th class="sortable" onclick="sortTable('fingerprint')">指紋</th>
+          <th>狀態</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div class="panel">
+      <div class="panel-header"><h3>操作紀錄</h3></div>
+      <div class="panel-body">
+        <div class="logs"><ul id="logs"></ul></div>
+      </div>
+    </div>
+
+    <div class="danger">
+      <p><b>危險操作：</b>清空全部買家（將同時清空封鎖清單與操作紀錄）</p>
+      <button class="btn btn-red" onclick="nukeAll()">清空全部買家</button>
+    </div>
+  </div>
+
+  <!-- 封鎖清單頁 -->
+  <div id="page-blocks" style="display:none">
+    <div class="toolbar">
+      <input id="blkKw" type="text" placeholder="搜尋 Email 或指紋">
+      <div class="spacer"></div>
+      <button class="btn btn-gray" onclick="exportBlocklist()">匯出封鎖清單</button>
+      <input id="blockInput" type="file" accept=".json">
+      <button class="btn btn-gray" onclick="importBlocklist()">匯入封鎖清單</button>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>封鎖統計</h3></div>
+      <div class="panel-body">
+        <div class="card">被封鎖帳號：<b id="blkAccountCount">0</b>　/　被封鎖裝置：<b id="blkDeviceCount">0</b></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>封鎖帳號（Email）</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="sortable" onclick="sortBlocked('email')">Email</th><th>封鎖原因</th><th class="sortable" onclick="sortBlocked('time')">封鎖時間</th><th>動作</th></tr></thead>
+          <tbody id="blkEmails"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h3>封鎖裝置（指紋）</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="sortable" onclick="sortBlocked('fp')">指紋</th><th class="sortable" onclick="sortBlocked('timefp')">封鎖時間</th><th>動作</th></tr></thead>
+        <tbody id="blkFPs"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 權限與通用工具 =====
+
+// ===== 共用工具 =====
+function getOrCreateUUID(){
+  let id = localStorage.getItem('deviceUUID');
+  if(!id){
+    id = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+    localStorage.setItem('deviceUUID', id);
+  }
+  return id;
+}
+function simpleHash(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){ h = Math.imul(31,h) + str.charCodeAt(i) | 0; }
+  return (h>>>0).toString(16);
+}
+function getFingerprint(){
+  const ua = navigator.userAgent || '';
+  const plat = navigator.platform || '';
+  const lang = navigator.language || '';
+  const scr = (screen.width||0)+'x'+(screen.height||0);
+  const uuid = getOrCreateUUID();
+  return simpleHash([ua,plat,lang,scr,uuid].join('|'));
+}
+function readBuyers(){ return JSON.parse(localStorage.getItem('allBuyers')||'[]'); }
+function saveBuyers(arr){ localStorage.setItem('allBuyers', JSON.stringify(arr)); }
+function readDeleted(){ return JSON.parse(localStorage.getItem('deletedAccounts')||'[]'); }
+function saveDeleted(arr){ localStorage.setItem('deletedAccounts', JSON.stringify(arr)); }
+function readBlockedFP(){ return JSON.parse(localStorage.getItem('blockedFingerprints')||'[]'); }
+function saveBlockedFP(arr){ localStorage.setItem('blockedFingerprints', JSON.stringify(arr)); }
+function readLogs(){ return JSON.parse(localStorage.getItem('logs')||'[]'); }
+function saveLogs(arr){ localStorage.setItem('logs', JSON.stringify(arr)); }
+function logAction(type, email, message){
+  const logs = readLogs();
+  logs.unshift({ time: new Date().toLocaleString(), type, email, message });
+  saveLogs(logs);
+}
+
+
+document.addEventListener('DOMContentLoaded', () => { 
+  if(localStorage.getItem('isAdmin')!=='true'){ alert('請先以管理員登入！'); window.location.href='login.html'; return; }
+  const admin = JSON.parse(localStorage.getItem('user')||'null');
+  document.getElementById('adminInfo').textContent = admin ? `${admin.nickname}（${admin.email}）` : '未知管理員';
+
+  // 初始化
+  autoUnblockExpired();
+  loadAndRender();
+  bindUserFilters();
+  document.getElementById('selectAll').addEventListener('change', toggleSelectAll);
+});
+
+function logoutAdmin(){ localStorage.removeItem('user'); localStorage.removeItem('loggedIn'); localStorage.removeItem('isAdmin'); window.location.href='login.html'; }
+
+// ===== 分頁切換 =====
+function switchTab(tab){
+  document.getElementById('tab-users').classList.toggle('active', tab==='users');
+  document.getElementById('tab-blocks').classList.toggle('active', tab==='blocks');
+  document.getElementById('page-users').style.display = (tab==='users')?'':'none';
+  document.getElementById('page-blocks').style.display = (tab==='blocks')?'':'none';
+  if(tab==='blocks') renderBlocklists();
+}
+
+// ===== 封鎖過期自動解除 =====
+function autoUnblockExpired(){
+  const buyers = readBuyers();
+  const now = Date.now(); let changed=false;
+  buyers.forEach(b=>{ if(b.blockedUntil && now > new Date(b.blockedUntil).getTime()){ b.blocked=false; b.blockedUntil=null; logAction('unblock', b.email, `${b.nickname} 封鎖到期自動解除`); changed=true; } });
+  if(changed) saveBuyers(buyers);
+}
+
+// ===== 統計、圖表、異常偵測 =====
+let buyersCache = []; let sortField=null, sortAsc=true;
+
+function loadAndRender(){
+  buyersCache = readBuyers();
+  updateStats();
+  drawTrend();
+  renderAnomaly();
+  renderTable();
+  renderLogs();
+}
+
+function togglePanel(){ const body = document.getElementById('statsBody'); body.style.display = body.style.display==='none' ? '' : 'none'; }
+
+function updateStats(){
+  const buyers = readBuyers();
+  const total = buyers.length;
+  const blocked = buyers.filter(b=>b.blocked).length;
+  const active = total-blocked;
+  const todayStr = new Date().toLocaleDateString();
+  const todayNew = buyers.filter(b => (b.date||'').includes(todayStr)).length;
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statBlocked').textContent=blocked;
+  document.getElementById('statActive').textContent=active;
+  document.getElementById('statToday').textContent=todayNew;
+}
+
+function drawTrend(){
+  const canvas = document.getElementById('trend'); const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const days=[...Array(7)].map((_,i)=>{ const d=new Date(); d.setDate(d.getDate()-(6-i)); return d; });
+  const buyers=readBuyers();
+  const counts=days.map(d=> buyers.filter(b=> (b.date||'').includes(d.toLocaleDateString())).length );
+  const w=canvas.width,h=canvas.height,pad=30,maxVal=Math.max(1,...counts);
+  ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,h-pad); ctx.lineTo(w-pad,h-pad); ctx.stroke();
+  const barW=(w-pad*2)/(counts.length*1.5);
+  counts.forEach((c,i)=>{ const x=pad+i*(barW*1.5)+barW*0.25; const barH=(h-pad*2)*(c/maxVal); ctx.fillRect(x,h-pad-barH,barW,barH); ctx.fillText(String(c), x+barW/3, h-pad-barH-4); });
+}
+
+function renderAnomaly(){
+  const el=document.getElementById('anomaly');
+  const buyers=readBuyers();
+  const now=Date.now(), dayMs=24*60*60*1000;
+  const recent=buyers.filter(b=> now - (new Date(b.date||0)).getTime() <= dayMs );
+  const map={};
+  recent.forEach(b=>{ const fp=b.fingerprint||'na'; map[fp]=(map[fp]||0)+1; });
+  const alerts=Object.entries(map).filter(([fp,c])=>c>=3);
+  if(alerts.length){ el.style.display='block'; el.innerHTML = `<b>異常警示：</b>同裝置於 24 小時內註冊多帳號 → ` + alerts.map(([fp,c])=>`${fp.slice(0,8)}（${c} 帳）`).join('、'); }
+  else{ el.style.display='none'; el.textContent=''; }
+}
+
+// ===== 檢視與渲染表格 =====
+function bindUserFilters(){ document.getElementById('kw').addEventListener('input', renderTable); document.getElementById('onlyBlocked').addEventListener('change', renderTable); document.getElementById('dateFilter').addEventListener('change', renderTable); }
+function toggleSelectAll(e){ const checked=e.target.checked; document.querySelectorAll('.rowCheck').forEach(cb=>cb.checked=checked); }
+
+function filteredBuyers(){
+  const kw=(document.getElementById('kw').value||'').trim().toLowerCase();
+  const onlyBlocked=document.getElementById('onlyBlocked').checked;
+  const dateFilter=document.getElementById('dateFilter').value;
+  const today=new Date();
+  return buyersCache.filter(b=>{ 
+    if(kw && !((b.nickname||'').toLowerCase().includes(kw) || (b.email||'').toLowerCase().includes(kw) || (b.fingerprint||'').toLowerCase().includes(kw))) return false;
+    if(onlyBlocked && !b.blocked) return false;
+    if(dateFilter==='today'){ if(!(b.date||'').includes(today.toLocaleDateString())) return false; }
+    else if(dateFilter==='7d'){ const bd=new Date(b.date||0); if((today-bd) > 7*24*60*60*1000) return false; }
+    return true;
+  });
+}
+
+function renderTable(){
+  const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+  let arr=filteredBuyers();
+  if(sortField){ arr = arr.slice().sort((a,b)=>{ const va=(a[sortField]||'').toString(); const vb=(b[sortField]||'').toString(); if(va<vb) return sortAsc?-1:1; if(va>vb) return sortAsc?1:-1; return 0; }); }
+  const fpCount={}; arr.forEach(b=>{ const fp=b.fingerprint||''; fpCount[fp]=(fpCount[fp]||0)+1; });
+  arr.forEach(b=>{ 
+    const tr=document.createElement('tr');
+    if(b.fingerprint && fpCount[b.fingerprint]>1) tr.classList.add('row-dup');
+    const fpShort=(b.fingerprint||'').slice(0,8);
+    tr.innerHTML=`
+      <td><input type="checkbox" class="rowCheck" data-email="${b.email}"></td>
+      <td>${b.nickname||''}</td>
+      <td>${b.email||''}</td>
+      <td>${b.date||''}</td>
+      <td>${fpShort}</td>
+      <td><span class="status-badge ${b.blocked?'status-blocked':'status-ok'}">${b.blocked?'封鎖':'正常'}</span>${b.blockedUntil?`<div class="small">至 ${new Date(b.blockedUntil).toLocaleString()}</div>`:''}</td>
+      <td>
+        <button class="btn btn-orange" onclick="blockOne('${b.email}')">封鎖</button>
+        <button class="btn btn-orange" onclick="blockOne('${b.email}',7)">封鎖7天</button>
+        <button class="btn btn-gray" onclick="unblockOne('${b.email}')">解除封鎖</button>
+        <button class="btn btn-red" onclick="deleteOne('${b.email}')">刪除</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function sortTable(field){ sortAsc = (sortField===field) ? !sortAsc : true; sortField=field; renderTable(); }
+
+// ===== 單筆/批次操作 =====
+function promptReason(label){ const r=prompt(`請輸入${label}原因（可留空）：`); return r||''; }
+
+function blockOne(email, days){
+  const buyers=readBuyers(); const i=buyers.findIndex(b=>b.email===email); if(i<0) return;
+  const reason=promptReason(days?'封鎖 7 天':'封鎖');
+  buyers[i].blocked=true; buyers[i].blockReason=reason; buyers[i].blockedUntil = days ? new Date(Date.now()+days*24*60*60*1000).toISOString() : null;
+  const del=readDeleted(); if(!del.includes(email)) del.push(email); saveDeleted(del);
+  const fps=readBlockedFP(); const fp = buyers[i].fingerprint||''; if(fp && !fps.includes(fp)) fps.push(fp); saveBlockedFP(fps);
+  saveBuyers(buyers);
+  logAction('block', email, `${buyers[i].nickname} 被${days?'封鎖 7 天':'永久封鎖'}｜原因：${reason}`);
+  loadAndRender();
+}
+
+function unblockOne(email){
+  const buyers=readBuyers(); const i=buyers.findIndex(b=>b.email===email); if(i<0) return;
+  buyers[i].blocked=false; buyers[i].blockedUntil=null;
+  saveBuyers(buyers);
+  logAction('unblock', email, `${buyers[i].nickname} 解除封鎖`);
+  loadAndRender();
+}
+
+function deleteOne(email){
+  if(!confirm('確定刪除此買家？此動作無法復原！')) return;
+  let buyers=readBuyers(); const i=buyers.findIndex(b=>b.email===email); if(i<0) return;
+  const reason=promptReason('刪除');
+  const del=readDeleted(); if(!del.includes(email)) del.push(email); saveDeleted(del);
+  const fps=readBlockedFP(); const fp = buyers[i].fingerprint||''; if(fp && !fps.includes(fp)) fps.push(fp); saveBlockedFP(fps);
+  logAction('delete', email, `${buyers[i].nickname} 已刪除｜原因：${reason}`);
+  buyers.splice(i,1); saveBuyers(buyers);
+  loadAndRender();
+}
+
+function selectedEmails(){ return Array.from(document.querySelectorAll('.rowCheck:checked')).map(cb=>cb.getAttribute('data-email')); }
+
+function batchBlock(){
+  const emails=selectedEmails(); if(!emails.length){ alert('請先勾選買家'); return; }
+  const reason=promptReason('批次封鎖');
+  const buyers=readBuyers(); const del=readDeleted(); const fps=readBlockedFP();
+  emails.forEach(email=>{ const b=buyers.find(x=>x.email===email); if(!b) return; b.blocked=true; b.blockedUntil=null; b.blockReason=reason; if(!del.includes(email)) del.push(email); const fp=b.fingerprint||''; if(fp && !fps.includes(fp)) fps.push(fp); logAction('block', email, `${b.nickname} 批次封鎖｜原因：${reason}`); });
+  saveDeleted(del); saveBlockedFP(fps); saveBuyers(buyers); loadAndRender();
+}
+
+function batchDelete(){
+  const emails=selectedEmails(); if(!emails.length){ alert('請先勾選買家'); return; }
+  if(!confirm(`確定刪除選取的 ${emails.length} 筆？此動作無法復原！`)) return;
+  const reason=promptReason('批次刪除');
+  let buyers=readBuyers(); const del=readDeleted(); const fps=readBlockedFP();
+  emails.forEach(email=>{ const i=buyers.findIndex(b=>b.email===email); if(i>=0){ const fp=buyers[i].fingerprint||''; if(!del.includes(email)) del.push(email); if(fp && !fps.includes(fp)) fps.push(fp); logAction('delete', email, `${buyers[i].nickname} 批次刪除｜原因：${reason}`); buyers.splice(i,1); } });
+  saveDeleted(del); saveBlockedFP(fps); saveBuyers(buyers); loadAndRender();
+}
+
+// ===== 操作紀錄 =====
+function renderLogs(){ const logs=readLogs(); const ul=document.getElementById('logs'); ul.innerHTML=''; logs.forEach(l=>{ const li=document.createElement('li'); li.textContent = `${l.time} - ${l.message}（${l.email}）`; ul.appendChild(li); }); }
+
+// ===== 匯入/匯出/備份/還原 =====
+function importCSV(){
+  const file=document.getElementById('csvInput').files[0]; if(!file){ alert('請先選檔案'); return; }
+  const reader=new FileReader();
+  reader.onload=()=>{ const lines=reader.result.split(/\r?\n/).filter(x=>x.trim()); const buyers=readBuyers();
+    lines.forEach((line,i)=>{ const [nickname,email,password]=line.split(',').map(s=>(s||'').trim()); if(i==0 && /暱稱/i.test(nickname)) return; if(!email) return; if(buyers.some(b=>(b.email||'').toLowerCase()===email.toLowerCase())) return; buyers.push({nickname,email,password,date:new Date().toLocaleString(),blocked:false,blockedUntil:null,blockReason:'',fingerprint:'',loginHistory:[]}); logAction('add', email, `${nickname} 由 CSV 匯入新增`); });
+    saveBuyers(buyers); loadAndRender(); alert('CSV 匯入完成'); };
+  reader.readAsText(file);
+}
+function downloadCSV(){
+  const rows = filteredBuyers();
+  let csv='暱稱,Email,註冊時間,狀態,指紋\n';
+  rows.forEach(b=> csv += `${b.nickname||''},${b.email||''},${b.date||''},${b.blocked?'封鎖':'正常'},${(b.fingerprint||'').slice(0,8)}\n` );
+  downloadBlob(csv,'buyers.csv','text/csv');
+}
+function exportBackup(){
+  const data={ allBuyers:readBuyers(), deletedAccounts:readDeleted(), blockedFingerprints:readBlockedFP(), logs:readLogs() };
+  downloadBlob(JSON.stringify(data,null,2),'backup.json','application/json');
+}
+function importBackup(){
+  const file=document.getElementById('backupInput').files[0]; if(!file){ alert('請選擇 JSON 備份檔'); return; }
+  const reader=new FileReader(); reader.onload=()=>{ try{ const data=JSON.parse(reader.result); if(data.allBuyers) localStorage.setItem('allBuyers', JSON.stringify(data.allBuyers)); if(data.deletedAccounts) localStorage.setItem('deletedAccounts', JSON.stringify(data.deletedAccounts)); if(data.blockedFingerprints) localStorage.setItem('blockedFingerprints', JSON.stringify(data.blockedFingerprints)); if(data.logs) localStorage.setItem('logs', JSON.stringify(data.logs)); alert('還原完成'); loadAndRender(); }catch(e){ alert('備份檔格式錯誤'); } };
+  reader.readAsText(file);
+}
+function nukeAll(){ if(!confirm('⚠️ 你即將清空全部買家、封鎖清單與操作紀錄，確定？')) return; localStorage.removeItem('allBuyers'); localStorage.removeItem('deletedAccounts'); localStorage.removeItem('blockedFingerprints'); localStorage.removeItem('logs'); loadAndRender(); alert('已清空所有資料'); }
+function downloadBlob(content, filename, type){ const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1500); }
+
+// ===== 封鎖清單分頁 =====
+let blkSortKey='time', blkAsc=false; // 預設依時間降冪
+document.getElementById('blkKw').addEventListener('input', renderBlocklists);
+
+function renderBlocklists(){
+  const kw=(document.getElementById('blkKw').value||'').trim().toLowerCase();
+  const emails=readDeleted().map(email=>({ email, reason: findBlockReasonByEmail(email), time: findBlockTimeByEmail(email) }));
+  const fps=readBlockedFP().map(fp=>({ fp, time: findBlockTimeByFP(fp) }));
+
+  const filtEmails=emails.filter(x=> !kw || x.email.toLowerCase().includes(kw));
+  const filtFPs=fps.filter(x=> !kw || x.fp.toLowerCase().includes(kw));
+
+  const sortBy = (arr, key, asc) => arr.sort((a,b)=>{ const va=a[key]||''; const vb=b[key]||''; if(va<vb) return asc?-1:1; if(va>vb) return asc?1:-1; return 0; });
+  sortBy(filtEmails, blkSortKey==='email'?'email':'time', blkAsc);
+  sortBy(filtFPs, blkSortKey in {fp:1,timefp:1} ? (blkSortKey==='fp'?'fp':'time') : 'time', blkAsc);
+
+  const tbE=document.getElementById('blkEmails'); tbE.innerHTML='';
+  filtEmails.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${x.email}</td><td>${x.reason||''}</td><td>${x.time||''}</td><td><button class='btn btn-gray' onclick="unblockEmail('${x.email}')">解除封鎖</button></td>`; tbE.appendChild(tr); });
+
+  const tbF=document.getElementById('blkFPs'); tbF.innerHTML='';
+  filtFPs.forEach(x=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${x.fp.slice(0,8)}</td><td>${x.time||''}</td><td><button class='btn btn-gray' onclick="unblockFP('${x.fp}')">解除封鎖</button></td>`; tbF.appendChild(tr); });
+
+  document.getElementById('blkAccountCount').textContent = readDeleted().length;
+  document.getElementById('blkDeviceCount').textContent = readBlockedFP().length;
+}
+
+function sortBlocked(key){ blkAsc = (blkSortKey===key) ? !blkAsc : false; blkSortKey=key; renderBlocklists(); }
+function unblockEmail(email){ if(!confirm(`確定解除封鎖 ${email} ？`)) return; const list = readDeleted().filter(x=>x!==email); saveDeleted(list); logAction('unblock-email', email, `解除 Email 封鎖`); renderBlocklists(); loadAndRender(); }
+function unblockFP(fp){ if(!confirm(`確定解除封鎖裝置 ${fp.slice(0,8)} ？`)) return; const list = readBlockedFP().filter(x=>x!==fp); saveBlockedFP(list); logAction('unblock-fp', fp, `解除 裝置封鎖`); renderBlocklists(); loadAndRender(); }
+
+function findBlockTimeByEmail(email){ const logs=readLogs(); const item=logs.find(l=> (l.type==='block' || l.type==='delete') && l.email===email ); return item?item.time:''; }
+function findBlockReasonByEmail(email){ const logs=readLogs(); const item=logs.find(l=> (l.type==='block' || l.type==='delete') && l.email===email ); if(!item) return ''; const m=item.message.split('｜原因：'); return m[1]||''; }
+function findBlockTimeByFP(fp){ const logs=readLogs(); const item=logs.find(l=> l.message.includes(fp.slice(0,8)) ); return item?item.time:''; }
+</script>
+</body>
+</html>

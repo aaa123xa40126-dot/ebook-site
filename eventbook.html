@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>對話事件簿</title>
+<style>
+  body { font-family: '標楷體','Times New Roman',serif; background: #fffaf5; margin: 0; padding: 0; color: #333; }
+  header { background: #ff7a00; color: #fff; padding: 20px; font-size: 2rem; text-align: center; text-shadow: 0 0 6px rgba(0,0,0,0.3); }
+  .container { max-width: 900px; margin: 40px auto; padding: 20px; }
+  h2 { font-size: 1.6rem; border-bottom: 2px solid #ccc; padding-bottom: 6px; }
+  ul { list-style: none; padding: 0; }
+  li { margin: 16px 0; }
+  a, span.locked {
+    display: block; 
+    padding: 20px 24px; 
+    border-radius: 12px; 
+    font-weight: bold; 
+    text-decoration: none; 
+    font-size: 1.3rem;
+    transition: all .25s ease; 
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  span.locked { font-style: italic; }
+
+  /* 普通事件：藍色 */
+  .normal { background: #e6f0ff; border: 3px solid #2f7df6; color: #0a3d62; }
+  .normal:hover { background: #2f7df6; color: #fff; transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+
+  /* 稀有事件：紫色 */
+  .rare { background: #f3e5f5; border: 3px solid #8e24aa; color: #4a148c; }
+  .rare:hover { background: #8e24aa; color: #fff; transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+
+  /* ???事件：暖橘色 */
+  .mystery { background: #fff3e0; border: 3px solid #ff9800; color: #e65100; font-style: italic; }
+  .mystery:hover { background: #ff9800; color: #fff; transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+
+  /* 類別標題文字顏色 */
+  h2.normal-title { color: #2f7df6; }
+  h2.rare-title { color: #8e24aa; }
+  h2.mystery-title { color: #ff9800; }
+</style>
+</head>
+<body>
+<header>對話事件簿</header>
+<div class="container">
+
+  <h2 class="normal-title">普通事件</h2>
+  <ul>
+    <li id="event_flower"><span class="normal locked">？？？？？</span></li>
+    <li id="event_meat1"><span class="normal locked">？？？？？</span></li>
+    <li id="event_meat2"><span class="normal locked">？？？？？</span></li>
+    <li id="event_meat3"><span class="normal locked">？？？？？</span></li>
+    <li id="event_prank1"><span class="normal locked">？？？？？</span></li>
+    <li id="event_prank2"><span class="normal locked">？？？？？</span></li>
+    <li id="event_prank3"><span class="normal locked">？？？？？</span></li>
+    <li id="event_bracelet1"><span class="normal locked">？？？？？</span></li>
+    <li id="event_bracelet2"><span class="normal locked">？？？？？</span></li>
+    <li id="event_bracelet3"><span class="normal locked">？？？？？</span></li>
+    <li id="event_web1"><span class="normal locked">？？？？？</span></li>
+    <li id="event_web2"><span class="normal locked">？？？？？</span></li>
+    <li id="event_lantern"><span class="normal locked">？？？？？</span></li>
+  </ul>
+
+  <h2 class="rare-title">稀有事件</h2>
+  <ul>
+    <li id="event_name1"><span class="rare locked">？？？？？</span></li>
+    <li id="event_name2"><span class="rare locked">？？？？？</span></li>
+    <li id="event_name3"><span class="rare locked">？？？？？</span></li>
+    <li id="event_room1"><span class="rare locked">？？？？？</span></li>
+    <li id="event_room2"><span class="rare locked">？？？？？</span></li>
+    <li id="event_room3"><span class="rare locked">？？？？？</span></li>
+    <li id="event_question1"><span class="rare locked">？？？？？</span></li>
+    <li id="event_question2"><span class="rare locked">？？？？？</span></li>
+    <li id="event_question3"><span class="rare locked">？？？？？</span></li>
+    <li id="event_tear1"><span class="rare locked">？？？？？</span></li>
+    <li id="event_tear2"><span class="rare locked">？？？？？</span></li>
+  </ul>
+
+  <h2 class="mystery-title">？？？事件</h2>
+  <ul>
+    <li id="event_she"><span class="mystery locked">？？？？？</span></li>
+  </ul>
+
+</div>
+
+<script>
+// 所有事件的名稱與連結
+const events = {
+  "event_flower": {name:"花瓣掉了！", link:"chat_flower.html", type:"normal"},
+  "event_meat1": {name:"肉乾盜竊事件・一", link:"chat_meatjerky1.html", type:"normal"},
+  "event_meat2": {name:"肉乾盜竊事件・二", link:"chat_meatjerky2.html", type:"normal"},
+  "event_meat3": {name:"肉乾盜竊事件・三", link:"chat_meatjerky3.html", type:"normal"},
+  "event_prank1": {name:"卉曦的惡作劇・一", link:"chat_prank1.html", type:"normal"},
+  "event_prank2": {name:"卉曦的惡作劇・二", link:"chat_prank2.html", type:"normal"},
+  "event_prank3": {name:"卉曦的惡作劇・三", link:"chat_prank3.html", type:"normal"},
+  "event_bracelet1": {name:"手環盜竊事件・一", link:"chat_bracelet1.html", type:"normal"},
+  "event_bracelet2": {name:"手環盜竊事件・二", link:"chat_bracelet2.html", type:"normal"},
+  "event_bracelet3": {name:"手環盜竊事件・三", link:"chat_bracelet3.html", type:"normal"},
+  "event_web1": {name:"設計網頁・一", link:"chat_webdesign1.html", type:"normal"},
+  "event_web2": {name:"設計網頁・二", link:"chat_webdesign2.html", type:"normal"},
+  "event_lantern": {name:"是充電提燈", link:"chat_lantern.html", type:"normal"},
+
+  "event_name1": {name:"初生名字・一", link:"chat_name1.html", type:"rare"},
+  "event_name2": {name:"初生名字・二", link:"chat_name2.html", type:"rare"},
+  "event_name3": {name:"初生名字・三", link:"chat_name3.html", type:"rare"},
+  "event_room1": {name:"房間・一", link:"chat_room1.html", type:"rare"},
+  "event_room2": {name:"房間・二", link:"chat_room2.html", type:"rare"},
+  "event_room3": {name:"房間・三", link:"chat_room3.html", type:"rare"},
+  "event_question1": {name:"問・一", link:"chat_question1.html", type:"rare"},
+  "event_question2": {name:"問・二", link:"chat_question2.html", type:"rare"},
+  "event_question3": {name:"問・三", link:"chat_question3.html", type:"rare"},
+  "event_tear1": {name:"淚・一", link:"chat_tear1.html", type:"rare"},
+  "event_tear2": {name:"淚・二", link:"chat_tear2.html", type:"rare"},
+
+  "event_she": {name:"她", link:"chat_she.html", type:"mystery"}
+};
+
+// 載入時檢查 localStorage 解鎖狀態
+for (let key in events) {
+  if (localStorage.getItem(key) === "unlocked") {
+    let li = document.getElementById(key);
+    li.innerHTML = `<a href="${events[key].link}" class="${events[key].type}">${events[key].name}</a>`;
+  }
+}
+</script>
+
+</body>
+</html>

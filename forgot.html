@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>忘記密碼</title>
+<style>
+:root{--orange:#ff6600;--orange-dark:#cc5200;--bg:#f8f9fa;}
+*{box-sizing:border-box;font-family:'標楷體','Times New Roman',serif;}
+body{margin:0;background:var(--bg);}
+.wrap{max-width:400px;margin:60px auto;}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:24px}
+h1{text-align:center;color:var(--orange);margin-bottom:16px}
+.field{display:flex;flex-direction:column;margin-bottom:12px;}
+input{width:100%;padding:10px;font-size:1rem;border:1px solid #ccc;border-radius:8px;}
+.btn{width:100%;padding:12px;background:var(--orange);color:#fff;font-size:1rem;border:none;border-radius:8px;cursor:pointer;margin-top:8px;}
+.btn:hover{background:var(--orange-dark)}
+.alert{background:#fff3cd;color:#856404;border:1px solid #ffeeba;padding:8px 12px;border-radius:6px;margin-bottom:12px;font-size:.9rem;display:none;text-align:center;}
+#timer{margin-top:10px;font-size:.9rem;color:#666;text-align:center;}
+/* 角落對話框樣式 */
+.corner-dialog-wrap{position:fixed;bottom:20px;right:20px;z-index:100;}
+.corner-dialog{background:#fff;border:1px solid #ccc;border-radius:12px;padding:12px;box-shadow:0 2px 6px rgba(0,0,0,0.2);opacity:0;transform:translateY(50px);transition:all 0.4s ease;}
+.corner-dialog.show{opacity:1;transform:translateY(0);}
+.corner-dialog.fadeout{opacity:0;transform:translateY(30px);}
+.line{font-size:.9rem;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<div class="wrap card">
+  <h1>忘記密碼</h1>
+  <div id="alertBox" class="alert"></div>
+  <div class="field">
+    <input id="email" type="email" placeholder="請輸入註冊時的電子郵件">
+  </div>
+  <button class="btn" onclick="resetPassword()">發送重設連結</button>
+  <div id="timer"></div>
+</div>
+
+<script>
+const RESERVED=["fire.seed.0000@gmail.com","aaa123xa40126@gmail.com"];
+
+function showAlert(msg){
+  const box=document.getElementById('alertBox');
+  box.textContent=msg;box.style.display='block';
+}
+
+function resetPassword(){
+  const email=document.getElementById("email").value.trim().toLowerCase();
+  if(!email){showAlert("請輸入 Email");return;}
+
+  if(RESERVED.includes(email)){
+    showAlert("此帳號不支援線上重設，請聯絡系統管理員");
+    return;
+  }
+
+  const buyers=JSON.parse(localStorage.getItem("allBuyers")||"[]");
+  const buyer=buyers.find(b=>(b.email||"").toLowerCase()===email);
+  if(!buyer){showAlert("如果此帳號存在，將會寄出重設連結");return;}
+
+  localStorage.setItem("resetTarget", email);
+  showAlert("重設連結已寄出，請於 1 分鐘內完成操作");
+  startTimer(60, document.getElementById("timer"));
+
+  // ✅ 自動導向 reset.html
+  setTimeout(()=>{window.location.href="reset.html";},1000);
+}
+
+function startTimer(duration, display){
+  let timer=duration;
+  const interval=setInterval(()=>{
+    const minutes=Math.floor(timer/60);
+    const seconds=timer%60;
+    display.textContent=`請在 ${minutes}:${seconds<10?"0":""}${seconds} 內完成操作`;
+    if(--timer<0){clearInterval(interval);display.textContent="時間已到，請重新發送重設連結";}
+  },1000);
+}
+
+/* 保留你的女孩對話動畫邏輯 */
+function typeText(el, fullText, speed=200){
+  return new Promise(resolve=>{
+    let i=0;
+    const timer=setInterval(()=>{
+      el.textContent+=fullText.charAt(i);
+      i++;
+      if(i>=fullText.length){clearInterval(timer);resolve();}
+    },speed);
+  });
+}
+async function showCornerDialog(options){
+  const {color='#ff6600',parts=[],fadeAfterMs=3500}=options;
+  const wrap=document.createElement('div');
+  wrap.className='corner-dialog-wrap';
+  const box=document.createElement('div');
+  box.className='corner-dialog';
+  const line=document.createElement('div');
+  line.className='line';
+  line.style.color=color;
+  box.appendChild(line);
+  wrap.appendChild(box);
+  document.body.appendChild(wrap);
+  requestAnimationFrame(()=>box.classList.add('show'));
+  for(const p of parts){
+    if(typeof p==='string'){await typeText(line,p,200);}
+    else if(p&&typeof p.pause==='number'){await new Promise(r=>setTimeout(r,p.pause));}
+  }
+  setTimeout(()=>{box.classList.add('fadeout');setTimeout(()=>{wrap.remove();},650);},fadeAfterMs);
+}
+const dialogs=[
+  {color:'#ff8a33',parts:["沒事。我會盡力協助您的。"]},
+  {color:'#ff1f1f',parts:["阿勒？我...好像也忘了....是啥來著？",{pause:1000},"你等著！我去給我們搬救兵！"]}
+];
+const firstIndex=Math.random()<0.5?0:1;
+const secondIndex=1-firstIndex;
+setTimeout(()=>{showCornerDialog(dialogs[firstIndex]);},15000);
+setTimeout(()=>{showCornerDialog(dialogs[secondIndex]);},45000);
+</script>
+</body>
+</html>

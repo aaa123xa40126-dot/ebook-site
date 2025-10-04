@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>註冊</title>
+<style>
+:root{--orange:#ff6600;--orange-dark:#cc5200;--bg:#f8f9fa;}
+*{box-sizing:border-box;font-family:'標楷體','Times New Roman',serif;}
+body{margin:0;background:var(--bg);color:#222;}
+.wrap{max-width:460px;margin:40px auto;}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:24px}
+h1{text-align:center;margin-bottom:16px}
+.field{display:flex;flex-direction:column;margin-bottom:12px;}
+input{width:100%;padding:10px;font-size:1rem;border:1px solid #ccc;border-radius:8px;}
+.password-field{position:relative;}
+.password-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#666;}
+.helper{margin-top:4px;font-size:.85rem}
+.helper.ok{color:green}
+.helper.warn{color:red}
+.strength-bar{height:6px;border-radius:3px;background:#ddd;margin-top:4px;transition:all .3s;}
+.strength-weak{background:red;width:33%}
+.strength-medium{background:orange;width:66%}
+.strength-strong{background:green;width:100%}
+.btn{width:100%;padding:12px;background:var(--orange);color:#fff;font-size:1rem;border:none;border-radius:8px;cursor:pointer;}
+.btn:hover{background:var(--orange-dark)}
+</style>
+</head>
+<body>
+<div class="wrap card">
+  <h1>建立帳號</h1>
+  <div class="field">
+    <label for="nickname">暱稱</label>
+    <input id="nickname" type="text" placeholder="輸入暱稱">
+  </div>
+  <div class="field">
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="輸入電子郵件">
+  </div>
+  <div class="field password-field">
+    <label for="password">密碼</label>
+    <input id="password" type="password" placeholder="至少 8 碼，含大小寫與數字">
+    <span class="password-toggle" onclick="togglePassword('password')">👁</span>
+    <div id="pwMsg" class="helper"></div>
+    <div id="pwStrength" class="strength-bar"></div>
+  </div>
+  <div class="field password-field">
+    <label for="password2">再次輸入密碼</label>
+    <input id="password2" type="password" placeholder="請再輸入一次密碼">
+    <span class="password-toggle" onclick="togglePassword('password2')">👁</span>
+    <div id="pw2Msg" class="helper"></div>
+  </div>
+  <button class="btn" onclick="register()">註冊</button>
+</div>
+<script>
+// 共用工具
+function getOrCreateUUID(){let id=localStorage.getItem('deviceUUID');if(!id){id=([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));localStorage.setItem('deviceUUID',id);}return id;}
+function simpleHash(str){let h=0;for(let i=0;i<str.length;i++){h=Math.imul(31,h)+str.charCodeAt(i)|0;}return (h>>>0).toString(16);}
+function getFingerprint(){const ua=navigator.userAgent||'',plat=navigator.platform||'',lang=navigator.language||'';const scr=(screen.width||0)+'x'+(screen.height||0);const uuid=getOrCreateUUID();return simpleHash([ua,plat,lang,scr,uuid].join('|'));}
+function readBuyers(){return JSON.parse(localStorage.getItem('allBuyers')||'[]');}
+function saveBuyers(arr){localStorage.setItem('allBuyers',JSON.stringify(arr));}
+function readDeleted(){return JSON.parse(localStorage.getItem('deletedAccounts')||'[]');}
+function readBlockedFP(){return JSON.parse(localStorage.getItem('blockedFingerprints')||'[]');}
+const RESERVED=["fire.seed.0000@gmail.com","aaa123xa40126@gmail.com"];
+
+function togglePassword(id){
+  const input = document.getElementById(id);
+  input.type = (input.type === 'password') ? 'text' : 'password';
+}
+
+// 密碼強度檢查
+function checkPasswordStrength(pw){
+  const rules={len:pw.length>=8,upper:/[A-Z]/.test(pw),lower:/[a-z]/.test(pw),digit:/[0-9]/.test(pw)};
+  const ok=rules.len&&rules.upper&&rules.lower&&rules.digit;
+  let score=0;if(rules.len)score++;if(rules.upper)score++;if(rules.lower)score++;if(rules.digit)score++;
+  return {ok,score,text:ok?"密碼強度良好 ✅":"缺少："+["長度","大寫","小寫","數字"].filter((v,i)=>!Object.values(rules)[i]).join("、")};
+}
+
+document.getElementById('password').addEventListener('input',()=>{
+  const pw=document.getElementById('password').value;
+  const {ok,score,text}=checkPasswordStrength(pw);
+  const msg=document.getElementById('pwMsg');
+  msg.textContent=text;msg.className='helper '+(ok?'ok':'warn');
+  const bar=document.getElementById('pwStrength');
+  bar.className='strength-bar '+(score<=1?'strength-weak':score==2||score==3?'strength-medium':'strength-strong');
+});
+
+document.getElementById('password2').addEventListener('input',()=>{
+  const p1=document.getElementById('password').value;
+  const p2=document.getElementById('password2').value;
+  const el=document.getElementById('pw2Msg');
+  if(!p2) el.textContent='';
+  else if(p1===p2){el.textContent='兩次輸入一致 ✅';el.className='helper ok';}
+  else {el.textContent='兩次輸入不一致';el.className='helper warn';}
+});
+
+function register(){
+  const nickname=document.getElementById('nickname').value.trim();
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const password=document.getElementById('password').value;
+  const password2=document.getElementById('password2').value;
+  if(!nickname||!email||!password){alert('請完整填寫');return;}
+  const chk=checkPasswordStrength(password);
+  if(!chk.ok){alert('密碼不符合規則：'+chk.text);return;}
+  if(password!==password2){alert('兩次密碼不一致');return;}
+  const fp=getFingerprint();
+  if(RESERVED.includes(email)){alert('此 Email 為管理員保留');return;}
+  if(readDeleted().includes(email)){alert('此 Email 已被封鎖');return;}
+  if(readBlockedFP().includes(fp)){alert('此裝置已被封鎖');return;}
+  const buyers=readBuyers();
+  if(buyers.some(b=>(b.email||'').toLowerCase()===email)){alert('此 Email 已註冊，請直接登入');return;}
+  const buyer={nickname,email,password,date:new Date().toLocaleString(),blocked:false,blockedUntil:null,blockReason:'',fingerprint:fp,loginHistory:[]};
+  buyers.push(buyer);saveBuyers(buyers);
+  alert('註冊成功！請前往登入。');window.location.href='login.html';
+}
+</script>
+</body>
+</html>

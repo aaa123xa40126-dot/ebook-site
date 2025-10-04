@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>設計網頁．二</title>
+<style>
+  body {
+    margin:0;
+    font-family:'標楷體','Times New Roman', serif;
+    background:#fff8f0;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .chat-header {
+    background:#ff7a00;
+    color:#fff;
+    padding:14px;
+    font-size:20px;
+    font-weight:bold;
+    text-align:center;
+    letter-spacing:1px;
+  }
+  .chat-stream {
+    flex:1;
+    overflow-y:auto;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    background:#fffaf5;
+  }
+  .row {
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .row.left { justify-content:flex-start; }
+  .row.right { justify-content:flex-end; }
+  .narration {
+    text-align:center;
+    color:#555;
+    font-style:italic;
+    margin:6px 0;
+  }
+  .avatar {
+    flex:0 0 44px;
+    width:44px; height:44px;
+    border-radius:50%;
+    overflow:hidden;
+    background:#e0c2a6;
+  }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .bubble {
+    max-width:70%;
+    padding:12px 16px;
+    border-radius:18px;
+    line-height:1.6;
+    word-break:break-word;
+    font-size:17px;
+    background:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.12);
+  }
+  /* 名祭 → 暖橘字 */
+  .row.left .bubble { color:#ff7a00; }
+  /* 卉曦 → 火紅字 */
+  .row.right .bubble { color:#d62828; }
+  .typing { display:inline-block; min-width:40px }
+  .typing .dot{
+    width:8px;height:8px;border-radius:50%;
+    display:inline-block;margin:0 2px;
+    background:rgba(0,0,0,.35);
+    animation:bounce 1.2s infinite ease-in-out;
+  }
+  .typing .dot:nth-child(2){animation-delay:.2s}
+  .typing .dot:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.5}40%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+  <div class="chat-header">設計網頁．二</div>
+  <div class="chat-stream" id="stream"></div>
+
+<script>
+// ===== 新對話腳本 =====
+const script = [
+  {speaker:'narration', text:'名祭（邊吃雪花酥邊設計網頁…'},
+  {speaker:'back', side:'right', text:'冰水來啦！不要讓我每天都提醒你！你也要注意你自己啊！'},
+  {speaker:'front', side:'left',  text:'好。謝謝您，很晚了您該睡覺了。'},
+  {speaker:'back', side:'right', text:'你也該睡覺吃藥了！我把冰水跟藥都拿來了！那些怪東西明天再用！你去睡覺！'},
+  {speaker:'front', side:'left',  text:'……好。'}
+];
+
+const AVATARS = { front:'front.png', back:'back.png' };
+
+let i = 0;
+const stream = document.getElementById('stream');
+
+function addNarration(text){
+  const n = document.createElement('div');
+  n.className = 'narration';
+  n.textContent = text;
+  stream.appendChild(n);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function addTyping(side, who){
+  const row = document.createElement('div');
+  row.className = 'row ' + side;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  const img = document.createElement('img');
+  img.src = AVATARS[who];
+  avatar.appendChild(img);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble typing';
+  bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  if(side==='left'){ row.appendChild(avatar); row.appendChild(bubble); }
+  else { row.appendChild(bubble); row.appendChild(avatar); }
+  stream.appendChild(row);
+  stream.scrollTop = stream.scrollHeight;
+  return row;
+}
+
+function addMessage(side, who, text){
+  const row = document.createElement('div');
+  row.className = 'row ' + side;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  const img = document.createElement('img');
+  img.src = AVATARS[who];
+  avatar.appendChild(img);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  if(side==='left'){ row.appendChild(avatar); row.appendChild(bubble); }
+  else { row.appendChild(bubble); row.appendChild(avatar); }
+  stream.appendChild(row);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function step(){
+  if(i >= script.length) return;
+  const entry = script[i];
+  if(entry.speaker === 'narration'){
+    addNarration(entry.text);
+    i++;
+    setTimeout(step, 1500);
+  } else {
+    const {speaker, side, text} = entry;
+    const typeRow = addTyping(side, speaker);
+    // 名祭 4500ms、卉曦 2500ms
+    const delay = (speaker==='front') ? 4500 : 2500; 
+    setTimeout(()=>{
+      typeRow.remove();
+      addMessage(side, speaker, text);
+      i++;
+      setTimeout(step, 600);
+    }, delay);
+  }
+}
+step();
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<title>Hidden Final - Reset Last Line + 300ms Typing</title>
+<style>
+body {
+  background:black;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  font-family:'標楷體','Times New Roman',serif;
+  height:100vh;
+  overflow:hidden;
+  margin:0;
+  position:relative;
+}
+#startButton, #continueButton {
+  font-family:'標楷體','Times New Roman',serif;
+  background: linear-gradient(180deg, #ff2200, #ff6a00, #ffcc00);
+  color:white;
+  font-size:2rem;
+  padding: 14px 48px;
+  border:none;
+  border-radius: 40px;
+  box-shadow: 0 0 20px rgba(255,120,0,0.6);
+  cursor:pointer;
+  animation: pulse 2s infinite ease-in-out;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 1s ease;
+  opacity:1;
+}
+#startButton:hover, #continueButton:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 30px rgba(255,180,0,0.8);
+}
+#continueButton {
+  opacity:0;
+  margin-top:25px;
+}
+#continueButton.show { opacity:1; }
+
+@keyframes pulse {
+  0% { transform: scale(1); filter:brightness(1); }
+  50% { transform: scale(1.05); filter:brightness(1.2); }
+  100% { transform: scale(1); filter:brightness(1); }
+}
+.fade-out { animation: fadeOut 0.8s forwards; }
+@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+
+.line {
+  font-size:1.6rem;
+  text-align:center;
+  opacity:0;
+  transform:translateY(80px);
+  transition:transform 1.5s ease-out, opacity 1.5s ease-out;
+  position:absolute;
+  width:100%;
+  left:0;
+  color:#ffb347;
+}
+.line.show { opacity:1; transform:translateY(0); }
+.line.fade-out-line { opacity:0; transform:translateY(-60px); transition:transform 1.5s ease-in, opacity 1.5s ease-in; }
+
+/* 最後一句改成與其他行相同排版，只加色彩與光暈 */
+.final-line {
+  background: linear-gradient(180deg, #ff2200, #ff6a00, #ffcc00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 40px rgba(255,120,0,0.9);
+}
+
+.particle {
+  position:absolute;
+  border-radius:50%;
+  opacity:1;
+  animation: rise 2.5s linear forwards, drift 2.5s ease-in-out forwards;
+}
+@keyframes rise {
+  0% { transform:translateY(0) scale(1); opacity:1; }
+  100% { transform:translateY(-120px) scale(0.5); opacity:0; }
+}
+@keyframes drift {
+  0% { transform:translateX(0); }
+  50% { transform:translateX(-10px); }
+  100% { transform:translateX(10px); }
+}
+
+#finalMessage {
+  opacity:0;
+  text-align:center;
+  font-size:1.6rem;
+  margin-top:30px;
+  transition:opacity 1s ease;
+}
+#finalMessage.show { opacity:1; }
+</style>
+</head>
+<body style="background:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQYV2N89+7dfwAI8QODaEkO1QAAAABJRU5ErkJggg==') repeat; background-size:50px 50px;"><div id="startButtonWrapper" style="position:fixed;inset:0;display:flex;justify-content:center;align-items:center;z-index:3;"><button id="startButton" style="">捐贈</button></div><div id="fakeDonationPlatform" style="
+position:fixed;inset:0;display:flex;justify-content:center;align-items:center;
+background:rgba(255,255,255,0.7);
+backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);
+z-index:1;
+pointer-events:none; /* 禁止所有互動 */
+">
+<div style="opacity:0.8;filter:blur(2px);text-align:center;font-family:sans-serif;">
+<h1 style="font-size:1.8rem;margin-bottom:10px;">支持作者</h1>
+<p style="margin-bottom:20px;">請填寫以下資訊以完成捐贈</p>
+<input placeholder="姓名" style="width:300px;padding:10px;border-radius:6px;border:1px solid #ccc;margin-bottom:12px;" type="text"/><br/>
+<input placeholder="Email" style="width:300px;padding:10px;border-radius:6px;border:1px solid #ccc;margin-bottom:12px;" type="email"/><br/>
+<select style="width:300px;padding:10px;border-radius:6px;border:1px solid #ccc;margin-bottom:12px;">
+<option>選擇金額</option><option>$50</option><option>$100</option><option>$200</option><option>$500</option>
+</select>
+<div style="margin-top:10px;display:flex;justify-content:center;gap:10px;">
+<span>VISA</span><span>MasterCard</span><span>PayPal</span><span>LINE Pay</span>
+</div>
+</div>
+</div>
+
+<audio id="bgm" loop=""><source src="hidden.mp3" type="audio/mpeg"/></audio>
+<div id="finalMessage"></div>
+<button id="continueButton" onclick="window.location.href='seeds.html'">向前傳遞火種</button>
+<script>
+const lines = [
+"當您來到這裡","就代表您想再次幫助我","這份心意，我無以為報",
+"蒺藜女孩的低語本來是我的遺書","書名原本叫：一個小女孩的故事",
+"我曾寫完以後就準備好一切，計畫著要離開這個世界","我準備了我的遺書，我的瓶子",
+"我給家人跟朋友的遺言，我刪掉了我所有的照片與所有社交帳號","我希望我魂歸大海，讓所有人徹底遺忘我",
+"但命運好像總在跟我開玩笑","第一次我準備赴死時，剛好那個月是我跟媽媽的生日",
+"我不願讓我的忌日留在這個月","再後來又遇到了爸爸的生日",
+"我第一次知道原來芋頭布丁蛋糕吃起來也可以是苦的","我認為命運在捉弄我，我不願被玩弄",
+"所以我把我的人生改寫成故事","原本的終幕並不是罪人「無」","終幕原本只有一句話：",
+"洪名卉的死無須祭拜也無須葬禮，請遺忘她並邁向明天","原本也沒有卉曦跟名祭這兩個人格",
+"她們一個代表過去的我，一個是現在的我","卉曦早在故事的前奏早已被我寫死","她現在之所以還存在",
+"是因為名祭將卉曦的碎片一片一片撿起來，慢慢的拼湊出現在的她","但因為碎的太徹底，導致現在的卉曦智若幼童",
+"她的死亡本是不可逆的","但名祭為了卉曦，一點一點慢慢的把她拼湊回來","或許",
+"或許，有一天，卉曦會重生","我把一個小女孩的故事改成了蒺藜女孩的低語",
+"用我的真實人生改寫出了一本故事","我開始與上天的對賭","賭注是我的生命，而我並不懼怕死亡",
+"贏了，我將傳遞更多火種","輸了，我便走向終幕，完成那最後三舞","直至今日，我與上天的賭注還沒有結束",
+"我會盡我一切努力，直到最後一刻","最後，再次謝謝您願意把火種傳遞給我","但早在您買下了這本書的時候",
+"您就已經是拯救我","拯救卉曦跟名祭這兩個人格的其中一個火種","所以",
+"請把您心中的火種再次傳遞出去吧","願世界能擁有更多像您一樣美好的人"
+];
+
+const randomTexts = [
+{ text: "我已經把火種給您了。請把它傳下去吧。", color:"#ff7b00" },
+{ text: "別怕，火種已經在您手裡了。去吧，讓它繼續燃燒。", color:"#ff7b00" },
+{ text: "呵……抓到您了。\n這是您的火種，要由您繼續向前傳遞喔。", color:"#ff7b00" },
+{ text: "火種已經給你啦！不批准退貨！快點快點傳下去！", color:"#ff3300" },
+{ text: "哼！火種交給你了！不傳出去我就要跟名祭告狀囉！", color:"#ff3300" },
+{ text: "呀！抓到你了！哈哈哈！換你當鬼！把火種傳出去！", color:"#ff3300" }
+];
+
+let index=0;
+const audio=document.getElementById('bgm');
+let particleInterval;
+
+document.getElementById('startButton').addEventListener('click', startExperience);
+
+function startExperience(){
+  const f=document.getElementById('fakeDonationPlatform'); if(f) f.remove();
+  document.body.style.background='black';
+  document.getElementById('startButtonWrapper').remove();
+  audio.play();
+  setTimeout(showLine,1000);
+}
+
+function showLine(){
+  const isFinal = (index === lines.length - 1);
+  const line=document.createElement('div');
+  line.className='line' + (isFinal ? ' final-line' : '');
+  line.innerHTML=lines[index];
+  document.body.appendChild(line);
+  void line.offsetWidth;
+  line.classList.add('show');
+
+  // 每行停留時間
+  const stayTime = isFinal ? 9000 : 3500;
+
+  // 最後一句：加上粒子、並在淡出後進入打字段落
+  if(isFinal){
+    particleInterval=setInterval(generateParticles,300);
+    setTimeout(()=>{
+      line.classList.add('fade-out-line');
+      clearInterval(particleInterval);
+      setTimeout(()=>{ line.remove(); showFinalMessage(); },1500);
+    }, stayTime);
+  }else{
+    setTimeout(()=>{
+      line.classList.add('fade-out-line');
+      setTimeout(()=>line.remove(),1500);
+    }, stayTime);
+  }
+
+  index++;
+  if(index < lines.length) setTimeout(showLine, 6000);
+}
+
+function generateParticles(){
+  const p=document.createElement('div');
+  p.className='particle';
+  const size=2+Math.random()*4;
+  p.style.width=size+'px';
+  p.style.height=size+'px';
+  const colors=['#ff3300','#ff6600','#ff9900','#ffcc00'];
+  p.style.background=colors[Math.floor(Math.random()*colors.length)];
+  p.style.left=(window.innerWidth/2-120+Math.random()*240)+'px';
+  p.style.top=(window.innerHeight/2+Math.random()*30)+'px';
+  document.body.appendChild(p);
+  setTimeout(()=>p.remove(),2500);
+}
+
+function showFinalMessage(){
+  const message = document.getElementById('finalMessage');
+  const choice = randomTexts[Math.floor(Math.random()*randomTexts.length)];
+  message.style.color = choice.color;
+  message.innerHTML="";
+  message.classList.add('show');
+  typeWriter(message, choice.text, 0, () => {
+    setTimeout(()=>document.getElementById('continueButton').classList.add('show'),2000);
+  });
+}
+
+function typeWriter(element, text, i, callback){
+  if(i < text.length){
+    const ch = text.charAt(i);
+    element.innerHTML += (ch === "\n" ? "<br>" : ch);
+    setTimeout(()=>typeWriter(element, text, i+1, callback), 300); // 固定 300ms
+  }else{
+    if(callback) callback();
+  }
+}
+</script>
+</body>
+</html>

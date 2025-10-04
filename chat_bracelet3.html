@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手環盜竊事件．三</title>
+<style>
+  body {
+    margin:0;
+    font-family:'標楷體','Times New Roman', serif;
+    background:#fff8f0;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .chat-header {
+    background:#ff7a00;
+    color:#fff;
+    padding:14px;
+    font-size:20px;
+    font-weight:bold;
+    text-align:center;
+    letter-spacing:1px;
+  }
+  .chat-stream {
+    flex:1;
+    overflow-y:auto;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    background:#fffaf5;
+  }
+  .row {
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+  }
+  .row.left { justify-content:flex-start; }
+  .row.right { justify-content:flex-end; }
+  .avatar {
+    flex:0 0 44px;
+    width:44px; height:44px;
+    border-radius:50%;
+    overflow:hidden;
+    background:#e0c2a6;
+  }
+  .avatar img { width:100%; height:100%; object-fit:cover; }
+  .bubble {
+    max-width:70%;
+    padding:12px 16px;
+    border-radius:18px;
+    line-height:1.6;
+    word-break:break-word;
+    font-size:17px;
+    background:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,.12);
+  }
+  /* 名祭 → 暖橘字 */
+  .row.left .bubble { color:#ff7a00; }
+  /* 卉曦 → 火紅字 */
+  .row.right .bubble { color:#d62828; }
+  .typing { display:inline-block; min-width:40px }
+  .typing .dot{
+    width:8px;height:8px;border-radius:50%;
+    display:inline-block;margin:0 2px;
+    background:rgba(0,0,0,.35);
+    animation:bounce 1.2s infinite ease-in-out;
+  }
+  .typing .dot:nth-child(2){animation-delay:.2s}
+  .typing .dot:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,80%,100%{transform:scale(.6);opacity:.5}40%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+  <div class="chat-header">手環盜竊事件．三</div>
+  <div class="chat-stream" id="stream"></div>
+
+<script>
+// ===== 新對話腳本 =====
+const script = [
+  {speaker:'back', side:'right', text:'呃嗯…這樣下去不行！我的肉乾都被名祭收起來了！我一定要想辦法拿回來！'},
+  {speaker:'back', side:'right', text:'左右邊沒人！（偷偷摸摸到名祭的抽屜'},
+  {speaker:'back', side:'right', text:'！抽屜怎麼上鎖了！可惡！她什麼時候上鎖的！'},
+  {speaker:'front', side:'left',  text:'上次您偷翻我抽屜之後。（笑'},
+  {speaker:'back', side:'right', text:'！！！'},
+  {speaker:'front', side:'left',  text:'不是跟您說過，抽屜可能會有奇怪的東西出現嗎？（笑'},
+  {speaker:'back', side:'right', text:'我…我…我命令你打開抽屜！我的肉乾快被我吃完了啦⋯⋯'},
+  {speaker:'front', side:'left',  text:'多喝冰水。多喝水對身體好。'},
+  {speaker:'back', side:'right', text:'…你這個大壞蛋！（跑走'},
+  {speaker:'front', side:'left',  text:'呵…（把三包肉乾放到卉曦的「肉乾倉庫」'},
+  {speaker:'front', side:'left',  text:'明明就還有十包呢。小喜鵲愛說謊。（笑'}
+];
+
+const AVATARS = { front:'front.png', back:'back.png' };
+
+let i = 0;
+const stream = document.getElementById('stream');
+
+function addTyping(side, who){
+  const row = document.createElement('div');
+  row.className = 'row ' + side;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  const img = document.createElement('img');
+  img.src = AVATARS[who];
+  avatar.appendChild(img);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble typing';
+  bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  if(side==='left'){ row.appendChild(avatar); row.appendChild(bubble); }
+  else { row.appendChild(bubble); row.appendChild(avatar); }
+  stream.appendChild(row);
+  stream.scrollTop = stream.scrollHeight;
+  return row;
+}
+
+function addMessage(side, who, text){
+  const row = document.createElement('div');
+  row.className = 'row ' + side;
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  const img = document.createElement('img');
+  img.src = AVATARS[who];
+  avatar.appendChild(img);
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+  if(side==='left'){ row.appendChild(avatar); row.appendChild(bubble); }
+  else { row.appendChild(bubble); row.appendChild(avatar); }
+  stream.appendChild(row);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function step(){
+  if(i >= script.length) return;
+  const {speaker, side, text} = script[i];
+  const typeRow = addTyping(side, speaker);
+  // 名祭 4500ms、卉曦 2500ms
+  const delay = (speaker==='front') ? 4500 : 2500; 
+  setTimeout(()=>{
+    typeRow.remove();
+    addMessage(side, speaker, text);
+    i++;
+    setTimeout(step, 600);
+  }, delay);
+}
+step();
+</script>
+</body>
+</html>

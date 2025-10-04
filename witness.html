@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>見證者名冊｜蒺藜女孩的低語</title>
+<style>
+  /* 基礎字體與顏色（與既有頁面一致） */
+  body{margin:0;font-family:'標楷體','Times New Roman',serif;background:#fff;color:#000}
+  header{padding:20px;text-align:left;font-size:2.6rem;color:#ff6600;text-shadow:0 0 8px rgba(255,100,0,.6)}
+  .top-bar{display:flex;justify-content:space-between;align-items:center;padding:0 30px}
+  nav{text-align:center;margin:10px 0 20px;font-size:1.3rem}
+  nav a{margin:0 18px;text-decoration:none;color:#333;transition:color .3s,text-shadow .3s}
+  nav a:hover{color:#ff6600;text-shadow:0 0 6px rgba(255,100,0,.6)}
+
+  /* 🔒 完全鎖死頂部位置（與已套用補丁一致） */
+  .top-bar, nav {  left: 0; width: 100%; z-index: 9999; background: #fff; }
+  .top-bar { top: 0; }
+  nav { top: 80px; }
+  body {  }
+</style>
+
+<style id="user-ui-override">
+/* 只追加，不覆蓋你的既有樣式 */
+.user-right{
+  position: fixed !important;
+  top: 12px !important;
+  right: 12px !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+.login-text{
+  color: #666 !important;
+  cursor: pointer !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  user-select: none !important;
+}
+.user-menu .avatar{
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 2px solid #ff7a00 !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+}
+#userDropdown{
+  position: fixed !important;
+  right: 12px !important;
+  top: 64px !important;
+  width: 260px !important;
+  background: #fff !important;
+  border: 1px solid #ddd !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18) !important;
+  padding: 14px !important;
+  display: none !important;
+  z-index: 2147483600 !important;
+  text-align: left !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+#userDropdown.show{ display: block !important; }
+#userDropdown p{
+  margin: 6px 0 !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  word-break: break-all !important;
+}
+#userDropdown .btn{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 42px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  margin-top: 10px !important;
+  cursor: pointer !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+#userDropdown .edit-btn{ background: #ff7a00 !important; }
+#userDropdown .logout-btn{ background: #444 !important; }
+</style>
+
+
+
+
+
+
+
+
+<style id="topbar-sync-from-intro">
+/* 以下樣式直接取自 intro.html，確保標題與導覽列位置一致 */
+body {margin:0;font-family:'標楷體','Times New Roman',serif;background:#fff;color:#000;}
+header{padding:20px; text-align:left; text-align:left;font-size:2.6rem;color:#ff6600;text-shadow:0 0 8px rgba(255,100,0,.6);}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:0 30px}
+nav{text-align:center;margin:10px 0 20px;font-size:1.3rem}
+nav a{margin:0 18px;text-decoration:none;color:#333;transition:color .3s,text-shadow .3s}
+nav a:hover{color:#ff6600;text-shadow:0 0 6px rgba(255,100,0,.6)}
+</style>
+
+</head>
+<body>
+  <div class="top-bar">
+    <header>蒺藜女孩的低語</header>
+  </div>
+  <nav>
+    <a href="main.html">首頁</a>
+    <a href="intro.html">小說簡介</a>
+    <a href="preview.html">試閱</a>
+    <a href="book.html">關於實體書</a>
+    <a href="forum.html">討論區</a>
+    <a href="author.html">關於作者</a>
+    <a href="witness.html">見證者名冊</a>
+    <a href="seeds.html">火種長廊</a>
+  </nav>
+
+  <!-- 內容區留白，之後再填 -->
+  <main class="container"></main>
+
+<!-- user ui block (non-intrusive) -->
+<div class="user-right" id="userUIRoot">
+  <div id="loginBtn" class="login-text">登入</div>
+  <div id="userMenu" class="user-menu" style="display:none;">
+    <img id="userAvatar" class="avatar" src="default-avatar.png" alt="頭像">
+  </div>
+</div>
+<div id="userDropdown" aria-hidden="true">
+  <p id="userNickname"></p>
+  <p id="userEmail"></p>
+  <button class="btn edit-btn" id="editProfileBtn">編輯個人資料</button>
+  <button class="btn logout-btn" id="logoutBtn">登出</button>
+</div>
+
+
+<script id="user-ui-logic">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function safe(fn){ try{ fn(); }catch(e){ console.warn(e); } }
+  function syncUI(){
+    var loginBtn=$('loginBtn'), userMenu=$('userMenu'), avatar=$('userAvatar');
+    var nn=$('userNickname'), em=$('userEmail');
+    var ustr = localStorage.getItem('user');
+    if(ustr){
+      try{
+        var u = JSON.parse(ustr);
+        if(loginBtn) loginBtn.style.display='none';
+        if(userMenu) userMenu.style.display='inline-flex';
+        if(avatar) avatar.src = u.avatar || 'default-avatar.png';
+        if(nn) nn.textContent = '暱稱：' + (u.nickname || '');
+        if(em) em.textContent = 'Email：' + (u.email || '');
+      }catch(e){ console.warn('parse user failed', e); }
+    }else{
+      if(loginBtn) loginBtn.style.display='block';
+      if(userMenu) userMenu.style.display='none';
+    }
+  }
+
+  function bind(){
+    var root=$('userUIRoot');
+    if(!root){ return false; }
+    var loginBtn=$('loginBtn'), userMenu=$('userMenu'), avatar=$('userAvatar');
+    var dropdown=$('userDropdown'), logoutBtn=$('logoutBtn'), editBtn=$('editProfileBtn');
+
+    // 行為：登入
+    if(loginBtn){
+      loginBtn.onclick = function(){ window.location.href='login.html'; };
+    }
+    // 行為：頭像 -> 展開選單
+    if(avatar && dropdown){
+      avatar.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+    }
+    // 外部點擊收起
+    document.addEventListener('click', function(e){
+      var d=$('userDropdown');
+      var avatar=$('userAvatar');
+      if(!d) return;
+      if(d.classList.contains('show')){
+        if(!d.contains(e.target) && (!avatar || !avatar.contains(e.target))){
+          d.classList.remove('show');
+        }
+      }
+    });
+
+    if(editBtn){
+      editBtn.onclick = function(){ window.location.href='data.html'; };
+    }
+    if(logoutBtn){
+      logoutBtn.onclick = function(){
+        localStorage.removeItem('user');
+        // 兼容早期存的旗標
+        localStorage.removeItem('loggedIn');
+        var d=$('userDropdown'); if(d) d.classList.remove('show');
+        syncUI();
+      };
+    }
+    // 初始同步
+    syncUI();
+    return true;
+  }
+
+  // 等 DOM 準備好後綁定；若沒抓到元素則輪詢
+  function init(){
+    if(!bind()){
+      var t = setInterval(function(){
+        if(bind()){ clearInterval(t); }
+      }, 120);
+    }
+  }
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(init, 0);
+  }else{
+    document.addEventListener('DOMContentLoaded', init);
+  }
+})();
+</script>
+
+
+<script src="auth-guard.js"></script>
+<script>
+  Auth.routeGuard({
+    needLogin: true,
+    needBuyer: true,
+    onBlocked: (reason) => {
+      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
+      else Auth.mountOverlay("not_buyer");
+    }
+  });
+</script>
+
+</body>
+</html>

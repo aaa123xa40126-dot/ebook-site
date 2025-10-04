@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理員後台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--orange:#ff6600;--bg:#f8f9fa;}
+*{box-sizing:border-box;font-family:'標楷體','Times New Roman',serif;}
+body{margin:0;background:var(--bg);}
+h1{text-align:center;color:var(--orange);margin-top:20px;}
+.controls{width:95%;margin:10px auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.controls input{flex:1;padding:6px 8px;border:1px solid #ccc;border-radius:6px;margin-right:10px;}
+.controls button{padding:6px 10px;border:none;border-radius:6px;background:#ff8a33;color:#fff;cursor:pointer;margin:4px 0;}
+canvas{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;}
+table{width:95%;margin:10px auto;border-collapse:collapse;background:#fff;}
+th,td{border:1px solid #ddd;padding:8px;text-align:center;}
+th{background:#ffe6cc;cursor:pointer;}
+tr:nth-child(even){background:#fdf5ee;}
+tr.danger{background:#ffe5e5;}
+.btn{padding:6px 10px;margin:0 2px;border:none;border-radius:6px;cursor:pointer;}
+.btn-danger{background:#ff4d4d;color:#fff;}
+.btn-block{background:#999;color:#fff;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;}
+.modal-content{background:#fff;border-radius:8px;padding:20px;max-width:400px;max-height:80%;overflow:auto;}
+</style>
+</head>
+<body>
+<h1>管理員後台</h1>
+
+<div class="controls">
+  <input type="text" id="searchBox" placeholder="搜尋暱稱或 Email">
+  <button onclick="exportCSV()">匯出 CSV</button>
+  <button onclick="exportJSON()">匯出 JSON</button>
+  <input type="file" id="importFile" style="display:none" accept=".json" onchange="importJSON(event)">
+  <button onclick="document.getElementById('importFile').click()">匯入 JSON</button>
+  <button onclick="batchNotify()">發送通知</button>
+</div>
+
+<canvas id="activityChart" height="120"></canvas>
+
+<table id="buyerTable">
+  <thead>
+    <tr>
+      <th><input type="checkbox" id="selectAll"></th>
+      <th onclick="sortTable('nickname')">暱稱 ▲▼</th>
+      <th onclick="sortTable('email')">Email ▲▼</th>
+      <th onclick="sortTable('date')">註冊時間 ▲▼</th>
+      <th onclick="sortTable('lastLogin')">最近登入 ▲▼</th>
+      <th onclick="sortTable('lastPasswordReset')">最近改密碼 ▲▼</th>
+      <th>狀態</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div class="controls">
+  <button class="btn btn-danger" onclick="batchDelete()">批次刪除</button>
+  <button class="btn btn-block" onclick="batchBlock()">批次封鎖</button>
+</div>
+
+<h2 style="text-align:center;color:#333;">管理員動作日誌</h2>
+<table id="adminLogTable">
+  <thead><tr><th>時間</th><th>動作</th><th>目標</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<div class="modal" id="historyModal">
+  <div class="modal-content">
+    <h3>帳號行為記錄</h3>
+    <ul id="historyList"></ul>
+    <button onclick="closeModal()">關閉</button>
+  </div>
+</div>
+
+<script>
+let sortKey=null, sortAsc=true;
+
+function renderTable(){
+  const buyers=JSON.parse(localStorage.getItem('allBuyers')||'[]');
+  const tbody=document.querySelector('#buyerTable tbody');
+  tbody.innerHTML='';
+
+  const search=document.getElementById('searchBox').value.toLowerCase();
+  const filtered=buyers.filter(b=>!search || b.nickname.toLowerCase().includes(search) || b.email.toLowerCase().includes(search));
+
+  if(sortKey){
+    filtered.sort((a,b)=>{
+      const va=a[sortKey]||'', vb=b[sortKey]||'';
+      return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+  }
+
+  filtered.forEach((b,idx)=>{
+    const tr=document.createElement('tr');
+    const lastLogin=(b.loginHistory && b.loginHistory[0]) ? b.loginHistory[0].time : '—';
+    const lastReset=b.lastPasswordReset || '—';
+    const status=b.failedAttempts>=5 ? '⚠ 登入異常' : (b.blocked ? '封鎖中' : '正常');
+    if(b.failedAttempts>=5) tr.classList.add('danger');
+    tr.innerHTML=`
+      <td><input type="checkbox" class="rowSelect" data-index="${idx}"></td>
+      <td>${b.nickname}</td>
+      <td>${b.email}</td>
+      <td>${b.date}</td>
+      <td>${lastLogin}</td>
+      <td>${lastReset}</td>
+      <td>${status}</td>
+      <td>
+        <button class="btn" onclick="viewHistory(${idx})">查看記錄</button>
+        <button class="btn btn-block" onclick="toggleBlock(${idx})">${b.blocked?'解封':'封鎖'}</button>
+        <button class="btn btn-danger" onclick="deleteBuyer(${idx})">刪除</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  renderChart(buyers);
+  renderAdminLogs();
+}
+
+function renderChart(buyers){
+  const ctx=document.getElementById('activityChart');
+  const logins=buyers.flatMap(b=>b.loginHistory||[]);
+  const grouped={};
+  logins.forEach(l=>{
+    const d=l.time.split(' ')[0];
+    grouped[d]=(grouped[d]||0)+1;
+  });
+  const labels=Object.keys(grouped).sort();
+  const data=labels.map(l=>grouped[l]);
+  new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'每日登入人數',data,backgroundColor:'#ff6600'}]}});
+}
+
+function viewHistory(index){
+  const buyers=JSON.parse(localStorage.getItem('allBuyers')||'[]');
+  const b=buyers[index];
+  const list=document.getElementById('historyList');
+  list.innerHTML='';
+  (b.history||[]).forEach(h=>{
+    const li=document.createElement('li');
+    li.textContent=`${h.time} - ${h.action}`;
+    list.appendChild(li);
+  });
+  document.getElementById('historyModal').style.display='flex';
+}
+
+function closeModal(){document.getElementById('historyModal').style.display='none';}
+
+function toggleBlock(index){
+  const buyers=JSON.parse(localStorage.getItem('allBuyers')||'[]');
+  const b=buyers[index];
+  logAdminAction(b.blocked?'解封帳號':'封鎖帳號', b.email);
+  b.blocked=!b.blocked;
+  localStorage.setItem('allBuyers',JSON.stringify(buyers));
+  renderTable();
+}
+
+function deleteBuyer(index){
+  if(confirm('確定刪除帳號？')){
+    const buyers=JSON.parse(localStorage.getItem('allBuyers')||'[]');
+    const deleted=buyers.splice(index,1)[0];
+    logAdminAction('刪除帳號', deleted.email);
+    localStorage.setItem('allBuyers',JSON.stringify(buyers));
+    renderTable();
+  }
+}
+
+function batchNotify(){
+  const checks=document.querySelectorAll('.rowSelect:checked');
+  if(checks.length===0)return alert('請勾選要通知的帳號');
+  const msg=prompt('輸入通知訊息：');
+  if(!msg)return;
+  const buyers=JSON.parse(localStorage.getItem('allBuyers')||'[]');
+  checks.forEach(c=>{
+    buyers[c.dataset.index].notifications = (buyers[c.dataset.index].notifications||[]).concat({msg,time:new Date().toLocaleString()});
+  });
+  logAdminAction('發送通知', `${checks.length} 個帳號`);
+  localStorage.setItem('allBuyers',JSON.stringify(buyers));
+  alert('通知已發送');
+}
+
+function exportCSV(){ /* 保留舊的 CSV 匯出邏輯 */ }
+function exportJSON(){
+  const buyers=localStorage.getItem('allBuyers');
+  const blob=new Blob([buyers],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='buyers_backup.json';
+  a.click();
+}
+function importJSON(e){
+  const file=e.target.files[0];
+  const reader=new FileReader();
+  reader.onload=function(){
+    if(confirm('確定覆蓋當前資料？')){
+      localStorage.setItem('allBuyers',reader.result);
+      renderTable();
+    }
+  }
+  reader.readAsText(file);
+}
+
+function logAdminAction(action,target){
+  const logs=JSON.parse(localStorage.getItem('adminLogs')||'[]');
+  logs.unshift({time:new Date().toLocaleString(),action,target});
+  localStorage.setItem('adminLogs',JSON.stringify(logs));
+}
+
+function renderAdminLogs(){
+  const logs=JSON.parse(localStorage.getItem('adminLogs')||'[]');
+  const tbody=document.querySelector('#adminLogTable tbody');
+  tbody.innerHTML='';
+  logs.slice(0,10).forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${l.time}</td><td>${l.action}</td><td>${l.target}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('searchBox').addEventListener('input',renderTable);
+document.getElementById('selectAll').addEventListener('change',e=>{
+  document.querySelectorAll('.rowSelect').forEach(cb=>cb.checked=e.target.checked);
+});
+renderTable();
+</script>
+</body>
+</html>

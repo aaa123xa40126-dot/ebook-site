@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>蒺藜女孩的低語｜劇場入口</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: '標楷體','Times New Roman',serif;
+    background: radial-gradient(circle, #ffffff 40%, #d9d9d9 75%, #a6a6a6 100%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #000;
+  }
+  .container {
+    text-align: center;
+    max-width: 800px;
+    padding: 20px;
+  }
+  .line {
+    font-size: 1.8rem;
+    white-space: pre-wrap;
+    margin-bottom: 20px;
+  }
+  .persona-black {
+    color: #ff6600;
+    text-shadow: 0 0 10px rgba(255, 102, 0, 0.4);
+  }
+  .persona-white {
+    color: red;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+  }
+  .enter-btn {
+    opacity: 0;
+    transition: opacity 1s ease;
+    border: none;
+    border-radius: 999px;
+    background: red;
+    color: #fff;
+    padding: 14px 32px;
+    font-size: 1.2rem;
+    margin-top: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+  .enter-btn:hover {
+    background: #b30000;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+    transform: scale(1.05);
+    transition: 0.3s ease;
+  }
+  .footline {
+    position: fixed;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: .9rem;
+    color: #444;
+    text-shadow: 0 0 6px rgba(0,0,0,0.2);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="line" id="line"></div>
+  <button class="enter-btn" id="enter" onclick="location.href='main.html'">進入官方網站</button>
+</div>
+<div class="footline">這場劇屬於您，其他地方看到的，都是影子，不是火種。</div>
+<script>
+  const lines = [
+    { cls: 'persona-black', text: ['阿...您來了呢。', '劇場我已為您開啟了。', '請入座。'], speed: 150 },
+    { cls: 'persona-white', text: ['哇！', '我的財神爺真的來了！', '啦啦啦～'], speed: 120 }
+  ];
+  const pick = lines[Math.random() < 0.5 ? 0 : 1];
+  const lineEl = document.getElementById('line');
+  lineEl.classList.add(pick.cls);
+
+  async function typeLine(line, speed) {
+    return new Promise(resolve => {
+      let i = 0;
+      function step() {
+        if (i < line.length) {
+          lineEl.textContent += line.charAt(i);
+          i++;
+          setTimeout(step, speed);
+        } else {
+          resolve();
+        }
+      }
+      step();
+    });
+  }
+
+  async function runDialog() {
+    for (let i = 0; i < pick.text.length; i++) {
+      await typeLine(pick.text[i], pick.speed);
+      if (i < pick.text.length - 1) {
+        await new Promise(r => setTimeout(r, 1500));
+        lineEl.textContent += "\n";
+      }
+    }
+    setTimeout(() => document.getElementById('enter').style.opacity = 1, 500);
+  }
+
+  runDialog();
+</script>
+</body>
+</html>

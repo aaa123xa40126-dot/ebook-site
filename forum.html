@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Forum</title>
+<style>
+  body{margin:0;font-family:'標楷體','Times New Roman',serif;background:#fff;color:#000}
+  header{padding:20px;text-align:left;font-size:2.6rem;color:#ff6600;text-shadow:0 0 8px rgba(255,100,0,.6)}
+  .top-bar{display:flex;justify-content:space-between;align-items:center;padding:0 30px}
+  nav{text-align:center;margin:10px 0 20px;font-size:1.3rem}
+  nav a{margin:0 18px;text-decoration:none;color:#333}
+  nav a.active{color:#ff6600;text-shadow:0 0 6px rgba(255,100,0,.6);font-weight:bold}
+  .user-right{display:flex;align-items:center;gap:10px}
+  .user-menu{position:relative;cursor:pointer}
+  .user-menu .avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #ff6600}
+  .dropdown{position:absolute;right:0;top:50px;background:white;border:1px solid #ccc;padding:10px;border-radius:8px;display:none}
+  .dropdown.show{display:block}
+  .container{max-width:1100px;margin:0 auto;padding:20px}
+  .section{background:#f7f8fa;border:1px solid #e5e5e5;border-radius:12px;padding:18px;margin:16px 30px}
+  .section h2{margin:0 0 10px}
+  .btn{background:#ff6600;border:none;color:#fff;border-radius:10px;padding:10px 16px;cursor:pointer}
+  .btn:hover{filter:brightness(1.05)}
+</style>
+
+
+<style>
+/* --- Topic list & badges --- */
+.topic-list { padding: 10px 30px; }
+.topic-card { display:flex; justify-content:space-between; align-items:center;
+  border:1px solid #e5e5e5; border-radius:12px; padding:14px 16px; margin:10px 0; cursor:pointer; background:#fff; }
+.topic-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.06); }
+.topic-meta { display:flex; gap:14px; align-items:center; font-size:.95rem; color:#555; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.8rem; border:1px solid #ccc; }
+.badge.following { border-color:#ff6600; color:#ff6600; }
+.badge.unread { background:#e6f0ff; border-color:#a8c5ff; color:#2459c4; }
+
+/* --- Thread view --- */
+.thread { padding: 8px 30px 20px; }
+.thread-header { display:flex; align-items:center; gap:12px; }
+.btn.icon { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; }
+.bell { font-size:1.1rem; }
+.bell.on { color:#ff6600; }
+
+/* --- Comments --- */
+.comment { border-bottom:1px solid #eee; padding:12px 0; }
+.comment .head { display:flex; align-items:center; gap:10px; }
+.comment .avatar { width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #ddd; }
+.comment .name { font-weight:bold; cursor:pointer; }
+.comment .actions { display:flex; gap:12px; font-size:.9rem; color:#555; margin-top:6px; }
+.comment .actions button { background:none; border:none; cursor:pointer; color:#555; }
+.comment .actions button:hover { color:#ff6600; }
+.comment .content { margin-top:6px; line-height:1.7; }
+.comment .meta { font-size:.85rem; color:#777; }
+.reply { margin-left:42px; border-left:2px solid #f0f0f0; padding-left:10px; }
+
+.unread-dot { width:8px; height:8px; background:#2b7cff; border-radius:50%; display:inline-block; margin-left:6px; }
+
+/* --- Editor --- */
+.editor { border:1px solid #e5e5e5; border-radius:12px; padding:0; overflow:hidden; background:#fff; }
+.toolbar { display:flex; gap:8px; padding:8px; border-bottom:1px solid #eee; background:#fafafa; }
+.tool-btn { background:#fff; border:1px solid #ddd; border-radius:8px; padding:6px 10px; cursor:pointer; }
+.tool-btn:hover { filter:brightness(1.03); }
+#emojiPanel { display:none; position:absolute; z-index:10; background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:8px; }
+#emojiPanel button { background:none; border:none; font-size:20px; cursor:pointer; padding:4px; }
+.editor-box { min-height:90px; padding:10px 12px; outline:none; }
+.editor-actions { display:flex; justify-content:flex-end; gap:10px; padding:10px; border-top:1px solid #eee; }
+
+/* --- Profile modal --- */
+.modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); }
+.modal .card { background:#fff; border-radius:14px; padding:18px; width:360px; box-shadow:0 10px 30px rgba(0,0,0,.2); }
+.modal .top { display:flex; align-items:center; gap:12px; }
+.modal .top img { width:56px; height:56px; border-radius:50%; border:2px solid #ff6600; object-fit:cover; }
+.modal .stats { display:flex; gap:16px; margin-top:10px; color:#555; }
+.modal .close { float:right; cursor:pointer; }
+
+/* --- Dark mode --- */
+:root { --bg:#fff; --fg:#000; --card:#fff; --muted:#555; }
+.dark { --bg:#0f1115; --fg:#e8e8e8; --card:#171a21; --muted:#b0b0b0; }
+body { background:var(--bg); color:var(--fg); }
+.section, .topic-card, .editor, .modal .card { background:var(--card); }
+.comment .actions button, .topic-meta { color:var(--muted); }
+
+/* --- Highlight for search --- */
+mark.hl { background:#fff2a8; padding:0 2px; border-radius:3px; }
+</style>
+
+
+<style>
+.empty-state {
+  text-align:center;
+  padding:40px 20px;
+  color:#777;
+  font-size:1.1rem;
+  border:2px dashed #ccc;
+  border-radius:12px;
+  margin-top:20px;
+}
+</style>
+
+
+<style id="user-ui-override">
+/* 只追加，不覆蓋你的既有樣式 */
+.user-right{
+  position: fixed !important;
+  top: 12px !important;
+  right: 12px !important;
+  z-index: 2147483000 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+.login-text{
+  color: #666 !important;
+  cursor: pointer !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  user-select: none !important;
+}
+.user-menu .avatar{
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 2px solid #ff7a00 !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+}
+#userDropdown{
+  position: fixed !important;
+  right: 12px !important;
+  top: 64px !important;
+  width: 260px !important;
+  background: #fff !important;
+  border: 1px solid #ddd !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18) !important;
+  padding: 14px !important;
+  display: none !important;
+  z-index: 2147483600 !important;
+  text-align: left !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+#userDropdown.show{ display: block !important; }
+#userDropdown p{
+  margin: 6px 0 !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  word-break: break-all !important;
+}
+#userDropdown .btn{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 42px !important;
+  border: none !important;
+  border-radius: 10px !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  margin-top: 10px !important;
+  cursor: pointer !important;
+  font-family: '標楷體','Times New Roman',serif !important;
+}
+#userDropdown .edit-btn{ background: #ff7a00 !important; }
+#userDropdown .logout-btn{ background: #444 !important; }
+</style>
+
+</head>
+<body>
+<div class="top-bar">
+  <header>蒺藜女孩的低語</header>
+  <div class="user-right">
+    <!-- removed user-menu
+      <img alt="頭像" class="avatar" id="userAvatar" src="default-avatar.png"/>
+      <div class="dropdown" id="userDropdown">
+        <p id="userNickname"></p>
+        <p id="userEmail"></p>
+        <button class="btn" style="width:100%;padding:8px" onclick="window.location.href='data.html'">編輯個人資料</button>
+        <button class="btn" id="logoutBtn" style="background:#444;margin-top:6px;width:100%;padding:8px">登出</button>
+      removed user-menu -->
+    </div>
+  </div>
+</div>
+
+<nav>
+  <a href="main.html">首頁</a>
+  <a href="intro.html">小說簡介</a>
+  <a href="preview.html">試閱</a>
+  <a href="book.html">關於實體書</a>
+  <a href="forum.html" class="active">討論區</a>
+  <a href="author.html">關於作者</a>
+
+  <a href="witness.html">見證者名冊</a>
+  <a href="seeds.html">火種長廊</a></nav>
+
+<main class="container">
+  <div style="text-align:right;margin-bottom:10px;">
+    <button class="btn" id="newThreadBtn">＋ 發表新主題</button>
+  </div>
+  <section class="section">
+    <h2>官方公告</h2>
+    <p>這裡會顯示管理員公告。</p>
+  </section>
+  <section class="section">
+    <h2>熱門話題</h2>
+    <p>顯示留言數最多的前三個主題。</p>
+  </section>
+  
+<section class="section">
+  <h2>所有主題</h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px 0;">
+    <div>
+      <input id="searchBox" placeholder="搜尋主題或留言…" style="padding:8px 10px;border-radius:10px;border:1px solid #ddd;width:260px"/>
+      <label style="margin-left:10px;font-size:.95rem"><input type="checkbox" id="tagOnly"> 只看有標籤</label>
+    </div>
+    <div>
+      排序：
+      <select id="sortSel" style="padding:6px 10px;border-radius:8px;border:1px solid #ddd">
+        <option value="latest">最新</option>
+        <option value="likes">按讚數</option>
+        <option value="replies">回覆數</option>
+      </select>
+    </div>
+  </div>
+  <div id="topicList" class="topic-list"></div>
+</section>
+
+<section class="section" id="threadSection" style="display:none;">
+  <div class="thread">
+    <div class="thread-header">
+      <h2 id="threadTitle" style="margin:0;"></h2>
+      <span id="threadTags"></span>
+      <button class="btn icon" id="followBtn" title="追蹤此主題"><span class="bell" id="bell">🔔</span><span id="followText">追蹤</span></button>
+      <button class="btn icon" id="toggleReplies">收合回覆</button>
+    </div>
+    <div id="threadMeta" class="topic-meta" style="margin:8px 0 4px 0;"></div>
+    <div id="comments"></div>
+    <div id="editorWrap" style="position:relative;margin-top:12px;">
+      <div class="editor" id="editor">
+        <div class="toolbar">
+          <button class="tool-btn" data-cmd="bold"><b>B</b></button>
+          <button class="tool-btn" data-cmd="italic"><i>I</i></button>
+          <button class="tool-btn" data-cmd="quote">“引用”</button>
+          <button class="tool-btn" data-cmd="code">code</button>
+          <button class="tool-btn" id="emojiBtn">😀</button>
+          <div id="emojiPanel"></div>
+        </div>
+        <div id="editorBox" class="editor-box" contenteditable="true" aria-label="撰寫留言…"></div>
+        <div class="editor-actions">
+          <button class="btn" id="cancelQuote" style="display:none;">取消引用</button>
+          <button class="btn" id="sendBtn">送出留言</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Profile modal -->
+<div class="modal" id="profileModal" role="dialog" aria-hidden="true">
+  <div class="card">
+    <div class="close" id="profileClose">✕</div>
+    <div class="top">
+      <img id="pfAvatar" src="default-avatar.png" alt="頭像">
+      <div>
+        <div id="pfName" style="font-weight:bold;font-size:1.2rem"></div>
+        <div id="pfBio" style="font-size:.95rem;color:#555"></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div>主題 <span id="pfTopics">0</span></div>
+      <div>留言 <span id="pfComments">0</span></div>
+      <div>讚 <span id="pfLikes">0</span></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+
+
+
+<script>
+(function(){
+  const userStr = localStorage.getItem("user");
+  if(userStr){
+    const user = JSON.parse(userStr);
+    const avatar = document.getElementById("userAvatar");
+    if(avatar){
+      avatar.src = user.avatar || "default-avatar.png";
+      avatar.addEventListener("click", () => {
+        const dropdown = document.getElementById("userDropdown");
+        dropdown.classList.toggle("show");
+      });
+    }
+    const nn = document.getElementById("userNickname");
+    if(nn){ nn.textContent = "暱稱：" + (user.nickname || ""); }
+    const em = document.getElementById("userEmail");
+    if(em){ em.textContent = "Email：" + (user.email || ""); }
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    if(logoutBtn){
+      logoutBtn.addEventListener("click", ()=>{
+        localStorage.removeItem("user");
+        localStorage.removeItem("loggedIn");
+        const loginBtn = document.createElement("div");
+        loginBtn.className = "login";
+        loginBtn.textContent = "登入";
+        loginBtn.onclick = ()=> window.location.href = "login.html";
+        const um = document.querySelector(".user-menu");
+        if(um) um.replaceWith(loginBtn);
+      });
+    }
+  } else {
+    const userMenu = document.querySelector(".user-menu");
+    if(userMenu){
+      const loginBtn = document.createElement("div");
+      loginBtn.className = "login";
+      loginBtn.textContent = "登入";
+      loginBtn.onclick = ()=> window.location.href = "login.html";
+      userMenu.replaceWith(loginBtn);
+    }
+  }
+})();
+document.getElementById("newThreadBtn").addEventListener("click", function(){
+  alert("之後會開啟發表主題表單");
+});
+</script>
+
+
+<script>
+(function(){
+  // --- Helpers ---
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+  const uid = () => Math.random().toString(36).slice(2);
+  const now = () => Date.now();
+
+  // --- Current user (from localStorage.user) fallback
+  const userObj = JSON.parse(localStorage.getItem("user") || '{"nickname":"訪客","email":"","avatar":"default-avatar.png","id":"guest"}');
+  const userId = userObj.id || 'guest';
+
+  // --- User profiles store (demo)
+  const USERS_KEY = "forum_users";
+  const DEFAULT_USERS = {
+    [userId]: { id:userId, name:userObj.nickname || "訪客", avatar:userObj.avatar || "default-avatar.png", bio:"來自黑暗童話的讀者。", topics:1, comments:3, likes:5 },
+    "u1": { id:"u1", name:"黑女孩", avatar:"default-avatar.png", bio:"舞台邊緣的低語。", topics:2, comments:8, likes:21 },
+    "u2": { id:"u2", name:"白女孩", avatar:"default-avatar.png", bio:"火紅笑聲的傳教士。", topics:1, comments:5, likes:9 }
+  };
+  const users = JSON.parse(localStorage.getItem(USERS_KEY) || "null") || DEFAULT_USERS;
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+  // --- Threads store (demo data if empty)
+  const THREADS_KEY = "forum_threads";
+  let threads = [];
+  localStorage.setItem(THREADS_KEY, JSON.stringify(threads));
+
+  // --- Follow per-user
+  const followKey = (tid)=> `forum_follows_${userId}`;
+  const getFollows = ()=> new Set(JSON.parse(localStorage.getItem(followKey()) || "[]"));
+  const setFollows = (s)=> localStorage.setItem(followKey(), JSON.stringify(Array.from(s)));
+
+  // --- Last read per thread
+  const lastReadKey = (tid)=> `forum_lastRead_${userId}_${tid}`;
+
+  // --- Sort preference
+  const PREF_SORT_KEY = `forum_pref_sort_${userId}`;
+
+  // --- Dark mode & font size (reuse if present elsewhere)
+  const darkKey = `forum_dark_${userId}`;
+  if(localStorage.getItem(darkKey)==="1"){ document.body.classList.add("dark"); }
+  // Add toggles near navbar if not present
+  const nav = document.querySelector("nav");
+  if(nav && !document.getElementById("uiToggles")){
+    const span = document.createElement("span");
+    span.id = "uiToggles";
+    span.style.marginLeft = "10px";
+    span.innerHTML = `
+      <button class="btn icon" id="darkToggle" style="padding:6px 10px;margin-left:8px;">🌙</button>
+      <button class="btn icon" id="fontSmaller" style="padding:6px 10px;">A-</button>
+      <button class="btn icon" id="fontLarger" style="padding:6px 10px;">A+</button>
+    `;
+    nav.appendChild(span);
+    $("#darkToggle").addEventListener("click", ()=>{
+      document.body.classList.toggle("dark");
+      localStorage.setItem(darkKey, document.body.classList.contains("dark")?"1":"0");
+    });
+    $("#fontSmaller").addEventListener("click", ()=>{
+      document.documentElement.style.fontSize = (parseFloat(getComputedStyle(document.documentElement).fontSize)-1)+"px";
+    });
+    $("#fontLarger").addEventListener("click", ()=>{
+      document.documentElement.style.fontSize = (parseFloat(getComputedStyle(document.documentElement).fontSize)+1)+"px";
+    });
+  }
+
+  // --- Render topic list
+  const topicListEl = $("#topicList");
+  const searchBox = $("#searchBox");
+  const sortSel = $("#sortSel");
+  const tagOnly = $("#tagOnly");
+
+  sortSel.value = localStorage.getItem(PREF_SORT_KEY) || "latest";
+  sortSel.addEventListener("change", ()=>{ localStorage.setItem(PREF_SORT_KEY, sortSel.value); renderTopics(); });
+
+  function sortThreads(arr){
+    if(sortSel.value === "likes"){
+      return arr.slice().sort((a,b)=> sumLikes(b)-sumLikes(a));
+    }else if(sortSel.value === "replies"){
+      return arr.slice().sort((a,b)=> countReplies(b)-countReplies(a));
+    }
+    return arr.slice().sort((a,b)=> b.createdAt - a.createdAt);
+  }
+  function sumLikes(t){ return t.comments.reduce((s,c)=> s+(c.likes||0), 0); }
+  function countReplies(t){ return t.comments.length; }
+
+  function matchesQuery(text, q){
+    if(!q) return true;
+    return text.toLowerCase().includes(q.toLowerCase());
+  }
+
+  function highlight(text, q){
+    if(!q) return text;
+    return text.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi"), m=> `<mark class="hl">${m}</mark>`);
+  }
+
+  function renderTopics(){
+    const follows = getFollows();
+    const q = searchBox.value.trim();
+    const list = sortThreads(threads).filter(t=>{
+      const hitTitle = matchesQuery(t.title, q);
+      const hitComments = t.comments.some(c=> matchesQuery(c.text, q));
+      const tagok = !tagOnly.checked || (t.tags && t.tags.length);
+      return (hitTitle || hitComments) && tagok;
+    });
+    topicListEl.innerHTML = "";
+    list.forEach(t=>{
+      const lastRead = parseInt(localStorage.getItem(lastReadKey(t.id) ) || "0");
+      const hasUnread = t.comments.some(c=> c.createdAt > lastRead);
+      const card = document.createElement("div");
+      card.className = "topic-card";
+      card.innerHTML = `
+        <div>
+          <div style="font-size:1.05rem;font-weight:bold;">${highlight(t.title, q)} ${hasUnread?'<span class="badge unread">新</span>':''}</div>
+          <div class="topic-meta">
+            <span>${t.tags.map(tag=>`<span class="badge">${tag}</span>`).join(' ')}</span>
+            <span>留言 ${t.comments.length}</span>
+            <span>讚 ${sumLikes(t)}</span>
+            <span>更新 ${timeAgo(Math.max(...t.comments.map(c=>c.createdAt), t.createdAt))}</span>
+            ${hasUnread?'<span class="unread-dot"></span>':''}
+          </div>
+        </div>
+        <div>
+          <span class="badge ${follows.has(t.id)?'following':''}">${follows.has(t.id)?'已追蹤':'未追蹤'}</span>
+        </div>
+      `;
+      card.addEventListener("click", ()=> openThread(t.id));
+      topicListEl.appendChild(card);
+    });
+  }
+
+  searchBox.addEventListener("input", renderTopics);
+  tagOnly.addEventListener("change", renderTopics);
+
+  function timeAgo(ts){
+    const diff = Math.floor((now()-ts)/1000);
+    if(diff<60) return `${diff}s 前`;
+    if(diff<3600) return `${Math.floor(diff/60)}m 前`;
+    if(diff<86400) return `${Math.floor(diff/3600)}h 前`;
+    return `${Math.floor(diff/86400)}d 前`;
+  }
+
+  // --- Thread view
+  const threadSection = $("#threadSection");
+  const commentsEl = $("#comments");
+  const threadTitleEl = $("#threadTitle");
+  const threadTagsEl = $("#threadTags");
+  const threadMetaEl = $("#threadMeta");
+  const followBtn = $("#followBtn");
+  const bell = $("#bell");
+  const followText = $("#followText");
+  const toggleRepliesBtn = $("#toggleReplies");
+
+  let currentThread = null;
+  let repliesCollapsed = false;
+
+  function openThread(tid){
+    currentThread = threads.find(x=> x.id===tid);
+    if(!currentThread) return;
+    $("#threadSection").style.display = "block";
+    threadTitleEl.textContent = currentThread.title;
+    threadTagsEl.innerHTML = (currentThread.tags||[]).map(t=>`<span class="badge">${t}</span>`).join(" ");
+    threadMetaEl.innerHTML = `共 ${currentThread.comments.length} 則留言 · 由 ${new Set(currentThread.comments.map(c=>c.user)).size} 人參與`;
+    updateFollowUI();
+    renderComments();
+    // mark as read
+    localStorage.setItem(lastReadKey(currentThread.id), String(now()));
+    renderTopics();
+  }
+
+  function updateFollowUI(){
+    const follows = getFollows();
+    const on = follows.has(currentThread.id);
+    bell.classList.toggle("on", on);
+    followText.textContent = on ? "已追蹤" : "追蹤";
+  }
+
+  followBtn.addEventListener("click", ()=>{
+    const s = getFollows();
+    if(s.has(currentThread.id)) s.delete(currentThread.id); else s.add(currentThread.id);
+    setFollows(s); updateFollowUI(); renderTopics();
+  });
+
+  toggleRepliesBtn.addEventListener("click", ()=>{
+    repliesCollapsed = !repliesCollapsed;
+    toggleRepliesBtn.textContent = repliesCollapsed ? "展開回覆" : "收合回覆";
+    renderComments();
+  });
+
+  // --- Render comments (nested)
+  function renderComments(){
+    commentsEl.innerHTML = "";
+    const root = currentThread.comments.filter(c=>!c.parent);
+    const byId = Object.fromEntries(currentThread.comments.map(c=>[c.id,c]));
+    const children = {};
+    currentThread.comments.forEach(c=>{
+      if(c.parent){ (children[c.parent]=children[c.parent]||[]).push(c); }
+    });
+
+    // Pinned reply
+    if(currentThread.pinnedReply){
+      const pr = byId[currentThread.pinnedReply];
+      if(pr){
+        commentsEl.appendChild(commentNode(pr, true));
+      }
+    }
+
+    root.forEach(c=>{
+      commentsEl.appendChild(commentNode(c, false));
+      if(!repliesCollapsed) renderChildren(c.id, 1);
+    });
+
+    function renderChildren(pid, depth){
+      const kids = children[pid] || [];
+      kids.forEach(chi=>{
+        const node = commentNode(chi, false, depth);
+        commentsEl.appendChild(node);
+        if(!repliesCollapsed) renderChildren(chi.id, depth+1);
+      });
+    }
+  }
+
+  function commentNode(c, pinned=false, depth=0){
+    const u = users[c.user] || users[userId];
+    const wrap = document.createElement("div");
+    wrap.className = "comment" + (c.parent? " reply":"");
+    wrap.style.marginLeft = c.parent ? (depth*18 + 42) + "px" : "0";
+
+    const emojis = c.emojis || {'❤️':0,'😂':0,'😡':0};
+    const created = timeAgo(c.createdAt);
+
+    wrap.innerHTML = `
+      <div class="head">
+        <img class="avatar" src="${u.avatar}" alt="">
+        <div class="name" data-uid="${u.id}">${u.name}</div>
+        <div class="meta">${created} ${pinned? '· <span title="置頂">📌 置頂</span>':''}</div>
+      </div>
+      <div class="content">${renderRich(c.text)}</div>
+      <div class="actions">
+        <button data-act="like">👍 <span>${c.likes||0}</span></button>
+        <div class="emojiRack">
+          ${Object.keys(emojis).map(k=>`<button data-emoji="${k}">${k} <span>${emojis[k]||0}</span></button>`).join(' ')}
+        </div>
+        <button data-act="reply">回覆</button>
+        <button data-act="quote">引用</button>
+        ${(c.user===userId)?'<button data-act="edit">編輯</button><button data-act="del">刪除</button>':''}
+        ${isAdmin()?'<button data-act="pin">置頂</button>':''}
+        <button data-act="report">檢舉</button>
+      </div>
+    `;
+
+    // profile
+    wrap.querySelector(".name").addEventListener("click", (e)=> openProfile(e.target.dataset.uid));
+
+    // like
+    wrap.querySelector('[data-act="like"]').addEventListener("click", ()=>{
+      c.likes = (c.likes||0)+1;
+      saveThreads(); renderComments(); burst("+1");
+    });
+
+    // emoji
+    wrap.querySelectorAll('[data-emoji]').forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const k = btn.getAttribute("data-emoji");
+        c.emojis = c.emojis || {'❤️':0,'😂':0,'😡':0};
+        c.emojis[k] = (c.emojis[k]||0)+1;
+        saveThreads(); renderComments(); burst(k);
+      });
+    });
+
+    // reply
+    wrap.querySelector('[data-act="reply"]').addEventListener("click", ()=>{
+      startReply(c.id, null);
+    });
+
+    // quote
+    wrap.querySelector('[data-act="quote"]').addEventListener("click", ()=>{
+      startReply(c.id, c.text);
+    });
+
+    // edit
+    if(c.user===userId){
+      wrap.querySelector('[data-act="edit"]').addEventListener("click", ()=>{
+        const raw = prompt("編輯留言：", stripHTML(c.text));
+        if(raw!==null){
+          c.text = escapeHTML(raw);
+          saveThreads(); renderComments();
+        }
+      });
+      wrap.querySelector('[data-act="del"]').addEventListener("click", ()=>{
+        if(confirm("確定刪除此留言？")){
+          c.text = "<i>此留言已被刪除</i>";
+          saveThreads(); renderComments();
+        }
+      });
+    }
+
+    // pin
+    if(isAdmin()){
+      wrap.querySelector('[data-act="pin"]').addEventListener("click", ()=>{
+        currentThread.pinnedReply = (currentThread.pinnedReply===c.id)? null : c.id;
+        saveThreads(); renderComments();
+      });
+    }
+
+    // report
+    wrap.querySelector('[data-act="report"]').addEventListener("click", ()=>{
+      alert("已送出檢舉，我們會盡快處理。");
+    });
+
+    return wrap;
+  }
+
+  function isAdmin(){
+    // 簡單判定：email 含 admin 視為管理員
+    return (userObj.email||"").toLowerCase().includes("admin");
+  }
+
+  // --- Rich text rendering
+  function renderRich(t){
+    // very light: support `> quote`, `*bold*`, `_italic_`, and inline code `\`code\``
+    let s = t;
+    s = escapeHTML(s);
+    s = s.replace(/^&gt;\s?(.*)$/gm, '<blockquote>$1</blockquote>');
+    s = s.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+    s = s.replace(/_([^_]+)_/g, '<i>$1</i>');
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/(https?:\/\/\S+)/g, '<a href="$1" target="_blank">$1</a>');
+    return s;
+  }
+  function stripHTML(html){ const div = document.createElement('div'); div.innerHTML = html; return div.textContent || div.innerText || ''; }
+  function escapeHTML(str){ return str.replace(/[&<>'"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // --- Start reply with optional quote
+  let replyParent = null;
+  let quoteText = null;
+  const editorBox = $("#editorBox");
+  const cancelQuote = $("#cancelQuote");
+
+  function startReply(parentId, qtext){
+    replyParent = parentId || null;
+    quoteText = qtext || null;
+    if(quoteText){
+      cancelQuote.style.display = "inline-block";
+      // visually show quote inside editor
+      const quoted = stripHTML(quoteText).slice(0,160);
+      editorBox.innerHTML = `<blockquote style="border-left:3px solid #ff6600;margin:0 0 6px 0;padding-left:8px;color:#555;">${escapeHTML(quoted)}</blockquote>` + editorBox.innerHTML;
+    }
+    editorBox.focus();
+  }
+  cancelQuote.addEventListener("click", ()=>{
+    quoteText = null; cancelQuote.style.display="none"; editorBox.innerHTML = "";
+  });
+
+  // --- Toolbar commands
+  $("#emojiBtn").addEventListener("click", (e)=>{
+    const panel = $("#emojiPanel");
+    if(panel.style.display==="block"){ panel.style.display="none"; return; }
+    panel.innerHTML = ["❤️","😂","😡","👍","🔥","👏","😮","😢"].map(x=>`<button>${x}</button>`).join("");
+    panel.style.left = (e.target.getBoundingClientRect().x - 10) + "px";
+    panel.style.top = (e.target.getBoundingClientRect().y + 30 + window.scrollY) + "px";
+    panel.style.display="block";
+    panel.querySelectorAll("button").forEach(b=> b.addEventListener("click", ()=>{
+      insertAtCaret(editorBox, b.textContent);
+      panel.style.display="none";
+    }));
+  });
+  $$(".tool-btn[data-cmd]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const cmd = btn.dataset.cmd;
+      if(cmd==="bold") wrapSelection("**","**");
+      else if(cmd==="italic") wrapSelection("_","_");
+      else if(cmd==="quote") wrapSelection("> ","");
+      else if(cmd==="code") wrapSelection("`","`");
+    });
+  });
+
+  function insertAtCaret(el, text){
+    el.focus();
+    document.execCommand('insertText', false, text);
+  }
+  function wrapSelection(left,right){
+    editorBox.focus();
+    const sel = window.getSelection();
+    if(!sel.rangeCount){ insertAtCaret(editorBox, left+right); return; }
+    const range = sel.getRangeAt(0);
+    const selected = range.toString();
+    document.execCommand('insertText', false, left + selected + right);
+  }
+
+  // --- Send comment
+  $("#sendBtn").addEventListener("click", ()=>{
+    const raw = editorBox.innerText.trim();
+    if(!raw){ alert("請輸入內容"); return; }
+    const txt = quoteText ? `> ${stripHTML(quoteText)}\n\n${raw}` : raw;
+    const c = { id: uid(), user: userId, text: txt, createdAt: now(), likes:0, emojis:{'❤️':0,'😂':0,'😡':0}, parent: replyParent };
+    currentThread.comments.push(c);
+    saveThreads();
+    // reset
+    replyParent = null; quoteText=null; cancelQuote.style.display="none"; editorBox.innerHTML="";
+    renderComments();
+    renderTopics();
+  });
+
+  function saveThreads(){ localStorage.setItem(THREADS_KEY, JSON.stringify(threads)); }
+
+  // --- Profile modal
+  const modal = $("#profileModal");
+  $("#profileClose").addEventListener("click", ()=> modal.style.display="none");
+  function openProfile(id){
+    const u = users[id] || users[userId];
+    $("#pfAvatar").src = u.avatar;
+    $("#pfName").textContent = u.name;
+    $("#pfBio").textContent = u.bio || "";
+    $("#pfTopics").textContent = u.topics||0;
+    $("#pfComments").textContent = u.comments||0;
+    $("#pfLikes").textContent = u.likes||0;
+    modal.style.display = "flex";
+  }
+  modal.addEventListener("click", (e)=>{ if(e.target===modal) modal.style.display="none"; });
+
+  // --- Init render
+  renderTopics();
+})();
+</script>
+
+
+<!-- user ui block (non-intrusive) -->
+<div class="user-right" id="userUIRoot">
+  <div id="loginBtn" class="login-text">登入</div>
+  <div id="userMenu" class="user-menu" style="display:none;">
+    <img id="userAvatar" class="avatar" src="default-avatar.png" alt="頭像">
+  </div>
+</div>
+<div id="userDropdown" aria-hidden="true">
+  <p id="userNickname"></p>
+  <p id="userEmail"></p>
+  <button class="btn edit-btn" id="editProfileBtn">編輯個人資料</button>
+  <button class="btn logout-btn" id="logoutBtn">登出</button>
+</div>
+
+
+<script id="user-ui-logic">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function safe(fn){ try{ fn(); }catch(e){ console.warn(e); } }
+  function syncUI(){
+    var loginBtn=$('loginBtn'), userMenu=$('userMenu'), avatar=$('userAvatar');
+    var nn=$('userNickname'), em=$('userEmail');
+    var ustr = localStorage.getItem('user');
+    if(ustr){
+      try{
+        var u = JSON.parse(ustr);
+        if(loginBtn) loginBtn.style.display='none';
+        if(userMenu) userMenu.style.display='inline-flex';
+        if(avatar) avatar.src = u.avatar || 'default-avatar.png';
+        if(nn) nn.textContent = '暱稱：' + (u.nickname || '');
+        if(em) em.textContent = 'Email：' + (u.email || '');
+      }catch(e){ console.warn('parse user failed', e); }
+    }else{
+      if(loginBtn) loginBtn.style.display='block';
+      if(userMenu) userMenu.style.display='none';
+    }
+  }
+
+  function bind(){
+    var root=$('userUIRoot');
+    if(!root){ return false; }
+    var loginBtn=$('loginBtn'), userMenu=$('userMenu'), avatar=$('userAvatar');
+    var dropdown=$('userDropdown'), logoutBtn=$('logoutBtn'), editBtn=$('editProfileBtn');
+
+    // 行為：登入
+    if(loginBtn){
+      loginBtn.onclick = function(){ window.location.href='login.html'; };
+    }
+    // 行為：頭像 -> 展開選單
+    if(avatar && dropdown){
+      avatar.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+    }
+    // 外部點擊收起
+    document.addEventListener('click', function(e){
+      var d=$('userDropdown');
+      var avatar=$('userAvatar');
+      if(!d) return;
+      if(d.classList.contains('show')){
+        if(!d.contains(e.target) && (!avatar || !avatar.contains(e.target))){
+          d.classList.remove('show');
+        }
+      }
+    });
+
+    if(editBtn){
+      editBtn.onclick = function(){ window.location.href='data.html'; };
+    }
+    if(logoutBtn){
+      logoutBtn.onclick = function(){
+        localStorage.removeItem('user');
+        // 兼容早期存的旗標
+        localStorage.removeItem('loggedIn');
+        var d=$('userDropdown'); if(d) d.classList.remove('show');
+        syncUI();
+      };
+    }
+    // 初始同步
+    syncUI();
+    return true;
+  }
+
+  // 等 DOM 準備好後綁定；若沒抓到元素則輪詢
+  function init(){
+    if(!bind()){
+      var t = setInterval(function(){
+        if(bind()){ clearInterval(t); }
+      }, 120);
+    }
+  }
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){
+    setTimeout(init, 0);
+  }else{
+    document.addEventListener('DOMContentLoaded', init);
+  }
+})();
+</script>
+
+
+<script src="auth-guard.js"></script>
+<script>
+  Auth.routeGuard({
+    needLogin: true,
+    needBuyer: true,
+    onBlocked: (reason) => {
+      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
+      else Auth.mountOverlay("not_buyer");
+    }
+  });
+</script>
+
+</body>
+</html>

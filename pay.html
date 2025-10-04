@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>支付方式｜蒺藜女孩的低語</title>
+<style>
+  :root { --brand:#ff6600; }
+  body{margin:0;background:#fff;color:#000;font-family:'標楷體','Times New Roman',serif;}
+  .top-bar{display:flex;justify-content:space-between;align-items:center;padding:0 30px}
+  header{padding:20px 0;font-size:2.6rem;color:var(--brand);text-shadow:0 0 8px rgba(255,100,0,.6)}
+  .login{font-size:1.3rem;color:#555;cursor:pointer;transition:color .3s, text-shadow .3s}
+  .login:hover{color:var(--brand);text-shadow:0 0 6px rgba(255,100,0,.6)}
+  .wrap{max-width:900px;margin:0 auto;padding:24px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+  .card{border:2px solid #555;border-radius:12px;padding:20px;box-shadow:0 0 16px rgba(0,0,0,.12);background:#fff;}
+  .summary-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:1.05rem}
+  .summary-row button{padding:4px 8px;margin:0 4px}
+  .total{font-size:1.4rem;color:#d00;font-weight:bold}
+  label{display:block;margin:10px 0 6px}
+  input{width:100%;padding:10px;border:1px solid #aaa;border-radius:8px;font-size:1rem;font-family:'標楷體','Times New Roman',serif;}
+  .btn{display:inline-block;margin-top:14px;padding:12px 18px;border:none;border-radius:14px;background:var(--brand);color:#fff;font-size:1.1rem;cursor:pointer;box-shadow:0 0 10px rgba(255,100,0,.35);transition:background .2s, transform .05s;font-family:'標楷體','Times New Roman',serif;}
+  .btn:hover{background:#e05500}
+  .dialogue-box{
+    position:fixed;right:20px;bottom:20px;border:2px solid var(--brand);
+    border-radius:12px;padding:12px 18px;font-size:1.2rem;max-width:280px;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);display:none;white-space:pre-line;
+    background:transparent;color:#000;
+  }
+  .dialogue-black{color:#ff6600}
+  .dialogue-white{color:#e60000}
+</style>
+</head>
+<body>
+<div class="top-bar">
+<header>蒺藜女孩的低語</header>
+<div class="login" id="loginBtn"></div>
+</div>
+<div class="wrap">
+<div class="grid">
+<section class="card">
+<h2>訂單摘要</h2>
+<div class="summary-row"><span>商品</span><span>蒺藜女孩的低語（電子書）</span></div>
+<div class="summary-row">
+  <span>數量</span>
+  <div>
+    <button onclick="changeQty(-1)">-</button>
+    <span id="sumQty">1</span>
+    <button onclick="changeQty(1)">+</button>
+  </div>
+</div>
+<div class="summary-row"><span>單價</span><span>$255</span></div>
+<div class="summary-row"><span>折扣</span><span>85折 <span class="badge">已套用</span></span></div>
+<hr/>
+<div class="summary-row total"><span>應付金額</span><span id="sumTotal">$255</span></div>
+<button class="btn secondary" onclick="goBack()">返回首頁</button>
+</section>
+<section class="card">
+<h2>支付方式</h2>
+<p>此訂單將使用 <b>藍新金流（NewebPay）</b> 完成付款。</p>
+<button class="btn" onclick="payWithNewebPay()">前往藍新金流付款</button>
+</section>
+</div>
+</div>
+<div class="dialogue-box" id="dialogueBox"></div>
+<script>
+const loginBtn=document.getElementById('loginBtn');
+function refreshAuthUI(){const isLoggedIn=localStorage.getItem('loggedIn')==='true';if(isLoggedIn){loginBtn.textContent='登出';loginBtn.onclick=()=>{localStorage.removeItem('loggedIn');alert('已登出');location.reload();};}else{loginBtn.textContent='登入';loginBtn.onclick=()=>location.href='login.html';}}
+refreshAuthUI();
+if(localStorage.getItem('loggedIn')!=='true'){if(confirm('進行付款前請先登入。是否前往登入？')){location.href='login.html';}}
+let qty=Math.max(1,parseInt(localStorage.getItem('cartQty')||'1',10));
+const unit=255;const qtyEl=document.getElementById('sumQty');const totalEl=document.getElementById('sumTotal');
+function renderTotal(){qtyEl.textContent=qty;totalEl.textContent='$'+(qty*unit);localStorage.setItem('cartQty',qty);}
+function changeQty(delta){qty+=delta;if(qty<1)qty=1;renderTotal();}
+renderTotal();
+function goBack(){window.location.href='main.html';}
+function payWithNewebPay(){alert('即將導向藍新金流付款頁面（模擬）。');localStorage.removeItem('cartQty');location.href='main.html';}
+
+// 對話框功能
+function typeText(element, text, speed, callback){let i=0;element.textContent='';function typing(){if(i<text.length){element.textContent+=text.charAt(i);i++;setTimeout(typing,speed);}else if(callback)callback();}typing();}
+function showDialogue(text,className){const box=document.getElementById('dialogueBox');box.className='dialogue-box '+className;box.style.display='block';typeText(box,text,200,()=>{setTimeout(()=>{box.style.transition='opacity 1s';box.style.opacity=0;setTimeout(()=>{box.style.display='none';box.style.opacity=1;},1000);},3500);});}
+
+setTimeout(()=>{
+  if(Math.random()>0.5){showDialogue('我已經準備好了。','dialogue-black');}
+  else{showDialogue('火！是火！好多火！','dialogue-white');}
+  setTimeout(()=>{showDialogue('火！是火！好多火！','dialogue-white');},10000);
+},10000);
+</script>
+
+<script src="auth-guard.js"></script>
+<script>
+  Auth.routeGuard({
+    needLogin: true,
+    needBuyer: true,
+    onBlocked: (reason) => {
+      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
+      else Auth.mountOverlay("not_buyer");
+    }
+  });
+</script>
+
+</body>
+</html>

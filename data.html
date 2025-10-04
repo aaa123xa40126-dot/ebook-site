@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>編輯個人資料</title>
+<style>
+  * { font-family: '標楷體','Times New Roman',serif; }
+  input[type='file'] { font-family: inherit; border: 1px solid #ccc; padding: 6px; border-radius: 6px; background: #fff; cursor: pointer; }
+  input[type='file']::file-selector-button {
+  font-family: inherit;
+  font-size: 1rem; background: #ff6600; color: white; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  input[type='file']::file-selector-button:hover { background: #cc5200; }
+
+  body {
+    margin: 0;
+    font-family: '標楷體','Times New Roman',serif;
+    background: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 30px;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    max-width: 500px;
+    width: 100%;
+    padding: 30px;
+  }
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+  }
+  .avatar-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-direction: column;
+    align-items: center;
+  }
+  .avatar-wrapper img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ff6600;
+    margin-bottom: 10px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  .field label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  .btn-primary { background: #ff6600; color: white; }
+  .btn-primary:hover { background: #cc5200; }
+  .btn-secondary { background: #ddd; }
+  .btn-secondary:hover { background: #ccc; }
+  .btn-danger { background: #e63946; color: white; }
+  .btn-danger:hover { background: #c82333; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>編輯個人資料</h1>
+
+  <div class="avatar-wrapper">
+    <img id="avatarPreview" src="default-avatar.png" alt="頭像預覽">
+    <input type="file" id="avatarInput" accept="image/*">
+  </div>
+
+  <div class="field">
+    <label for="nickname">暱稱</label>
+    <input type="text" id="nickname">
+  </div>
+
+  <div class="field">
+    <label for="email">電子郵件</label>
+    <input type="email" id="email">
+  </div>
+
+  <div class="field">
+    <label for="bio">自我介紹</label>
+    <textarea id="bio" rows="3" placeholder="簡單介紹你自己..."></textarea>
+  </div>
+
+  <div class="field">
+    <label for="theme">主題顏色</label>
+    <select id="theme">
+      <option value="light">淺色模式</option>
+      <option value="dark">深色模式</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="password">更改密碼</label>
+    <input type="password" id="password" placeholder="新密碼">
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="saveProfile()">儲存</button>
+    <button class="btn btn-secondary" onclick="window.history.back()">取消</button>
+    <button class="btn btn-danger" onclick="deleteAccount()">刪除帳號</button>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const userStr = localStorage.getItem("user");
+    if(userStr){
+      const user = JSON.parse(userStr);
+      if(user.avatar) document.getElementById('avatarPreview').src = user.avatar;
+      document.getElementById('nickname').value = user.nickname || "";
+      document.getElementById('email').value = user.email || "";
+      document.getElementById('bio').value = user.bio || "";
+    }
+  });
+
+  document.getElementById('avatarInput').addEventListener('change', function(){
+    const file = this.files[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        document.getElementById('avatarPreview').src = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+  });
+
+  function saveProfile(){
+    const user = {
+      nickname: document.getElementById('nickname').value,
+      email: document.getElementById('email').value,
+      bio: document.getElementById('bio').value,
+      avatar: document.getElementById('avatarPreview').src
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    alert('資料已更新！');
+    window.location.href = 'main.html';
+  }
+
+  function deleteAccount(){
+    if(confirm('確定要刪除帳號嗎？此動作無法復原！')){
+      localStorage.removeItem('user');
+      localStorage.removeItem('loggedIn');
+      alert('帳號已刪除。');
+      // 即時把右上角換成登入按鈕（避免殘留頭像）
+      const userMenu = document.querySelector(".user-menu");
+      if(userMenu){
+        const loginBtn = document.createElement("div");
+        loginBtn.className = "login";
+        loginBtn.textContent = "登入";
+        loginBtn.onclick = ()=> window.location.href = "login.html";
+        userMenu.replaceWith(loginBtn);
+      }
+      window.location.href = 'main.html';
+      return;
+    }
+    if(confirm('確定要刪除帳號嗎？此動作無法復原！')){
+      localStorage.removeItem('user');
+      localStorage.removeItem('loggedIn');
+      alert('帳號已刪除。');
+      window.location.href = 'main.html';
+    }
+  }
+</script>
+</body>
+</html>
