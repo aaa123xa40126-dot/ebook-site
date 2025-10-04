@@ -113,7 +113,12 @@ html,body{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:1.6rem;color:var(--orange2);z-index:20;opacity:0;
 }
-@keyframes textFade{0%{opacity:0;}20%{opacity:1;}100%{opacity:0;}}
+@keyframes textFade{
+  0%{opacity:0;}
+  10%{opacity:1;}
+  80%{opacity:1;}
+  100%{opacity:0;}
+}
 </style>
 </head>
 <body>
@@ -192,10 +197,19 @@ function ignite(){
   content.classList.add('fadeContent');
   createSparks();
   playSounds();
+
+  // 顯示「火種被點燃了」
   setTimeout(()=>{
-    document.getElementById('fireText').style.animation='textFade 0.8s ease forwards';
+    document.getElementById('fireText').style.animation='textFade 2.5s ease forwards';
   },2000);
-  setTimeout(()=>{window.location.href='main.html';},3300);
+
+  // ✅ 儲存解鎖狀態（這是關鍵）
+  localStorage.setItem("fireUnlocked", "true");
+
+  // 跳轉主頁
+  setTimeout(()=>{
+    window.location.href='main.html';
+  },4300);
 }
 
 window.onload=()=>{
