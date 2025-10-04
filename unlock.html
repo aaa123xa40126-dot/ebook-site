@@ -3,8 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>火種解鎖儀式・穩定版</title>
+<title>火種解鎖儀式・正式版</title>
 <style>
+.glowBg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #000;
+  transition: background 3.5s ease;
+}
+.run .glowBg {
+  background: #fff;
+}
 :root{
   --orange:#ffb86b; --orange2:#ff8c1a; --gold:#ffdca8;
 }
@@ -15,7 +25,7 @@ html,body{
   overflow:hidden;
 }
 
-/* 🔥 按鈕永遠可點、閃爍火光 */
+/* 按鈕閃爍火光 */
 #ignite {
   position: relative !important;
   z-index: 9999 !important;
@@ -39,12 +49,11 @@ html,body{
   to{filter:brightness(1.25);}
 }
 
-/* 🔧 關掉所有遮罩層的互動 */
 .maskLayer, .whiteCore, .goldGlow, .edgeNoise, .sparks, .fireText {
   pointer-events:none !important;
 }
 
-/* 主容器 */
+/* 主體 */
 .wrap{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;
 }
@@ -66,9 +75,9 @@ html,body{
   margin:0 auto 20px;display:block;
 }
 
-/* 燒蝕遮罩層 */
+/* 動畫遮罩 */
 .maskLayer{
-  position:fixed;inset:0;z-index:10;display:none; /* 點擊後才顯示 */
+  position:fixed;inset:0;z-index:10;display:none;
 }
 .whiteCore,.goldGlow,.edgeNoise{position:absolute;inset:0;opacity:0;}
 .whiteCore{
@@ -97,7 +106,7 @@ html,body{
   100%{transform:translate(0,0) scale(0.7);opacity:0;}
 }
 
-/* 動畫 */
+/* 文字動畫 */
 .fadeContent{transition:opacity 2s ease;opacity:0;}
 @keyframes shrinkIn{
   0%{clip-path:circle(120% at 50% 50%);opacity:1;}
@@ -107,8 +116,6 @@ html,body{
 .run .whiteCore{animation:shrinkIn 2s cubic-bezier(.25,.6,.3,1) forwards;opacity:1;}
 .run .goldGlow{animation:shrinkIn 2s cubic-bezier(.25,.6,.3,1) forwards;opacity:1;}
 .run .edgeNoise{animation:shrinkIn 2s ease forwards;opacity:.55;}
-
-/* 結尾文字 */
 .fireText{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:1.6rem;color:var(--orange2);z-index:20;opacity:0;
@@ -122,6 +129,7 @@ html,body{
 </style>
 </head>
 <body>
+<div class="glowBg"></div>
 <div class="wrap" id="contentWrap">
   <div class="panel">
     <div class="title">請輸入您的專屬火種序號</div>
@@ -140,32 +148,30 @@ html,body{
 <div class="fireText" id="fireText">火種被點燃了....</div>
 
 <script>
-let audioCtx=null;
-
-function playSounds(){
-  try{
-    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    const ctx=audioCtx, dur=2.0, sr=ctx.sampleRate, len=sr*dur, buf=ctx.createBuffer(1,len,sr), d=buf.getChannelData(0);
-    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*0.16;
-    for(let k=0;k<90;k++){
-      const p=Math.floor(Math.random()*len), w=Math.floor(sr*(0.002+Math.random()*0.005)), a=0.45+Math.random()*0.9;
-      for(let i=0;i<w&&p+i<len;i++){d[p+i]+=a*Math.exp(-i/(w*0.55));}
+function playBurnSound(){
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const dur = 6.5, sr = ctx.sampleRate, len = sr * dur;
+  const buf = ctx.createBuffer(1, len, sr);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+  for (let k = 0; k < 150; k++){
+    const p = Math.floor(Math.random() * len);
+    const w = Math.floor(sr * (0.002 + Math.random() * 0.004));
+    const a = 0.5 + Math.random() * 1.0;
+    for (let i = 0; i < w && p + i < len; i++){
+      data[p + i] += a * Math.exp(-i / (w * 0.5));
     }
-    const src=ctx.createBufferSource();src.buffer=buf;
-    const band=ctx.createBiquadFilter();band.type='bandpass';band.frequency.value=2200;band.Q.value=1.2;
-    const g=ctx.createGain();const now=ctx.currentTime;
-    g.gain.setValueAtTime(0.0001,now);
-    g.gain.exponentialRampToValueAtTime(0.75,now+0.12);
-    g.gain.exponentialRampToValueAtTime(0.4,now+1.2);
-    g.gain.exponentialRampToValueAtTime(0.0001,now+dur);
-    src.connect(band);band.connect(g);g.connect(ctx.destination);src.start();
-    const osc=ctx.createOscillator(),g2=ctx.createGain();
-    osc.frequency.setValueAtTime(90,now+1.6);
-    osc.frequency.exponentialRampToValueAtTime(22,now+2.0);
-    g2.gain.setValueAtTime(0.28,now+1.6);
-    g2.gain.exponentialRampToValueAtTime(0.0001,now+2.05);
-    osc.connect(g2);g2.connect(ctx.destination);osc.start(now+1.6);osc.stop(now+2.1);
-  }catch(e){console.warn("音效失敗",e);}
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  const now = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.6, now + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  src.connect(g);
+  g.connect(ctx.destination);
+  src.start();
 }
 
 function createSparks(){
@@ -187,7 +193,7 @@ function createSparks(){
 }
 
 function ignite(){
-  console.log("🔥 點燃火種按鈕綁定成功");
+  document.body.classList.add('run');
   const btn=document.getElementById('ignite');
   btn.style.pointerEvents='none';
   const mask=document.getElementById('mask');
@@ -196,25 +202,21 @@ function ignite(){
   const content=document.getElementById('contentWrap');
   content.classList.add('fadeContent');
   createSparks();
-  playSounds();
+  playBurnSound();
 
-  // 顯示「火種被點燃了」
   setTimeout(()=>{
     document.getElementById('fireText').style.animation='textFade 2.5s ease forwards';
   },2000);
 
-  // ✅ 儲存解鎖狀態（這是關鍵）
   localStorage.setItem("fireUnlocked", "true");
 
-  // 跳轉主頁
   setTimeout(()=>{
     window.location.href='main.html';
-  },4300);
+  },7000);
 }
 
 window.onload=()=>{
   const btn=document.getElementById('ignite');
-  btn.style.pointerEvents='auto';
   btn.addEventListener('click',ignite);
 };
 </script>
