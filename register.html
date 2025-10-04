@@ -115,5 +115,54 @@ function register(){
 }
 </script>
   <script type="module" src="firebase-init.js"></script>
+
+<!-- Firebase Register Integration (no design changes) -->
+<script type="module">
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+const auth = getAuth();
+
+function getEl(id){ return document.getElementById(id); }
+function showMsg(id, text, ok=false){
+  const el = getEl(id);
+  if(!el) return;
+  el.textContent = text;
+  el.className = ok ? 'helper ok' : 'helper warn';
+  el.style.display = 'block';
+}
+
+// Override global register() if defined via inline onclick
+window.register = async function(){
+  const nickname = (getEl('nickname')?.value || '').trim();
+  const email = (getEl('email')?.value || '').trim();
+  const password = getEl('password')?.value || '';
+  const password2 = getEl('password2')?.value || '';
+
+  if(!nickname){ showMsg('pwMsg','請輸入暱稱'); return; }
+  if(!email){ showMsg('pwMsg','請輸入電子郵件'); return; }
+  if(!password || password.length < 6){ showMsg('pwMsg','密碼至少 6 碼'); return; }
+  if(password !== password2){ showMsg('pw2Msg','兩次密碼不一致'); return; }
+
+  try{
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if(nickname){
+      try{ await updateProfile(cred.user, { displayName: nickname }); }catch(e){ console.warn('updateProfile failed', e); }
+    }
+    // 註冊完成 → 回登入頁
+    // 清理舊 localStorage 以避免舊程式誤判
+    localStorage.removeItem('user'); localStorage.setItem('loggedIn','false');
+    window.location.href = 'login.html';
+  }catch(err){
+    console.error(err);
+    // 常見錯誤訊息處理
+    let msg = '註冊失敗，請確認信箱是否正確或已被使用。';
+    if(err.code === 'auth/email-already-in-use') msg = '此電子郵件已被註冊。';
+    if(err.code === 'auth/invalid-email') msg = '電子郵件格式不正確。';
+    if(err.code === 'auth/weak-password') msg = '密碼過於簡單，至少 6 碼。';
+    showMsg('pwMsg', msg);
+  }
+}
+</script>
+
 </body>
 </html>

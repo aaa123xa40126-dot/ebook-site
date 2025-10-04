@@ -138,5 +138,60 @@ document.getElementById('loginBtn').addEventListener('click', function(){
 });
 </script>
   <script type="module" src="firebase-init.js"></script>
+
+<!-- Firebase Login Integration (no design changes) -->
+<script type="module">
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+const auth = getAuth();
+
+function showError(msg){
+  const box = document.getElementById('alertBox');
+  if (box) {
+    box.textContent = msg;
+    box.style.display = 'block';
+  } else {
+    alert(msg);
+  }
+}
+
+function bindLogin(){
+  const btn = document.getElementById('loginBtn');
+  const emailEl = document.getElementById('email');
+  const pwEl = document.getElementById('password');
+  if(!btn || !emailEl || !pwEl) return;
+
+  // Override any previous click behavior safely
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const email = emailEl.value.trim();
+    const password = pwEl.value;
+    if(!email || !password){
+      showError('請輸入電子郵件與密碼');
+      return;
+    }
+    try{
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      // Sync legacy localStorage (for舊程式相容)
+      const u = { email: cred.user.email, displayName: cred.user.displayName || '' };
+      localStorage.setItem('user', JSON.stringify(u));
+      localStorage.setItem('loggedIn','true');
+      // Go to main.html
+      window.location.href = 'main.html';
+    }catch(err){
+      console.error(err);
+      showError('帳號或密碼錯誤，或帳號不存在。');
+    }
+  }, { once:false });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindLogin);
+} else {
+  bindLogin();
+}
+</script>
+
 </body>
 </html>
