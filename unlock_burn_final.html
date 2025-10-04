@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>火種解鎖儀式・最終版</title>
+<style>
+:root{
+  --orange:#ffb86b;
+  --orange2:#ff8c1a;
+  --gold:#ffdca8;
+}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:#000;color:var(--orange);
+  font-family:'DFKai-SB','標楷體','Times New Roman',Times,serif;
+  overflow:hidden;
+}
+.wrap{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;
+}
+.panel{
+  width:min(720px,92%);
+  border:1px solid var(--orange);
+  border-radius:14px;
+  padding:28px 22px;
+  text-align:center;
+  line-height:1.9;
+  box-shadow:0 0 24px rgba(255,184,107,.08) inset;
+  background:#000;
+}
+.title{font-size:1.3rem;letter-spacing:2px;margin-bottom:12px;}
+.input{
+  width:95%;max-width:700px;padding:14px 16px;font-size:1.1rem;
+  border:1px solid color-mix(in oklab,var(--orange),#000 40%);
+  border-radius:10px;background:#0b0b0b;color:var(--orange);
+  box-sizing:border-box;margin:0 auto;display:block;
+}
+.btn{
+  margin-top:16px;display:inline-block;border:1px solid var(--orange);
+  padding:10px 20px;border-radius:12px;color:var(--orange);
+  text-decoration:none;cursor:pointer;transition:all .2s ease;
+}
+.btn:hover{
+  color:var(--gold);
+  box-shadow:0 0 14px rgba(255,184,107,.55), inset 0 0 8px rgba(255,184,107,.18);
+}
+#burnLayer{
+  position:fixed;inset:0;pointer-events:none;z-index:5;
+  background:#000;
+  mix-blend-mode:lighten;
+}
+.glow{
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 50%,rgba(255,184,107,0.3) 60%,rgba(0,0,0,1) 100%);
+  clip-path:circle(0% at 50% 50%);
+  opacity:0;
+}
+.fireText{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;color:var(--orange2);
+  opacity:0;z-index:20;
+  animation: none;
+}
+@keyframes burnInward{
+  0%{clip-path:circle(120% at 50% 50%);opacity:1;}
+  80%{clip-path:circle(10% at 50% 50%);opacity:1;}
+  100%{clip-path:circle(5% at 50% 50%);opacity:0;}
+}
+@keyframes fadeText{0%{opacity:0;}20%{opacity:1;}100%{opacity:0;}}
+@keyframes fadeOutAll{from{opacity:1;}to{opacity:0;}}
+.spark{
+  position:absolute;width:3px;height:3px;border-radius:50%;
+  opacity:0;
+}
+@keyframes sparkMove{
+  0%{transform:translate(var(--sx),var(--sy)) scale(1);opacity:0;}
+  10%{opacity:1;}
+  100%{transform:translate(0,0) scale(0.7);opacity:0;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel" id="panel">
+    <div class="title">請輸入您的專屬火種序號</div>
+    <input class="input" placeholder="輸入任意文字即可預覽">
+    <a id="ignite" class="btn">點燃火種</a>
+  </div>
+</div>
+
+<div id="burnLayer">
+  <div class="glow" id="glow"></div>
+</div>
+<div id="fireText" class="fireText">火種被點燃了....</div>
+
+<script>
+let ctx;
+function playBurnSound(){
+  if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const dur=1.5,sr=ctx.sampleRate,len=sr*dur,buf=ctx.createBuffer(1,len,sr),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*0.2;
+  for(let k=0;k<70;k++){
+    const p=Math.floor(Math.random()*len);
+    const w=Math.floor(sr*(0.002+Math.random()*0.004));
+    const a=0.6+Math.random()*0.8;
+    for(let i=0;i<w&&p+i<len;i++){
+      const e=Math.exp(-i/(w*0.6));
+      d[p+i]+=a*e;
+    }
+  }
+  const src=ctx.createBufferSource();src.buffer=buf;
+  const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=2300;f.Q.value=1.2;
+  const g=ctx.createGain();const now=ctx.currentTime;
+  g.gain.setValueAtTime(0.0001,now);
+  g.gain.exponentialRampToValueAtTime(0.8,now+0.1);
+  g.gain.exponentialRampToValueAtTime(0.3,now+1.2);
+  g.gain.exponentialRampToValueAtTime(0.0001,now+dur);
+  src.connect(f);f.connect(g);g.connect(ctx.destination);src.start();
+
+  // 呼氣音
+  const osc=ctx.createOscillator();
+  const g2=ctx.createGain();
+  osc.frequency.setValueAtTime(80,now+1.2);
+  osc.frequency.exponentialRampToValueAtTime(20,now+1.5);
+  g2.gain.setValueAtTime(0.3,now+1.2);
+  g2.gain.exponentialRampToValueAtTime(0.0001,now+1.5);
+  osc.connect(g2);g2.connect(ctx.destination);osc.start(now+1.2);osc.stop(now+1.6);
+}
+
+function createSparks(){
+  const layer=document.getElementById('burnLayer');
+  for(let i=0;i<100;i++){
+    const s=document.createElement('div');s.className='spark';
+    const angle=Math.random()*2*Math.PI;
+    const dist=window.innerWidth*0.6;
+    const tx=-Math.cos(angle)*dist,ty=-Math.sin(angle)*dist;
+    const colors=['#ffb86b','#ff9d4d','#ffdca8','#fff2cc'];
+    s.style.background=colors[Math.floor(Math.random()*colors.length)];
+    s.style.setProperty('--sx',tx+'px');
+    s.style.setProperty('--sy',ty+'px');
+    s.style.left=(Math.cos(angle)*window.innerWidth*0.5+window.innerWidth/2)+'px';
+    s.style.top=(Math.sin(angle)*window.innerHeight*0.5+window.innerHeight/2)+'px';
+    s.style.animation=`sparkMove 1.5s ease-out ${Math.random()*0.2}s forwards`;
+    layer.appendChild(s);
+  }
+}
+
+function ignite(){
+  document.getElementById('panel').style.animation='fadeOutAll 0.6s ease forwards';
+  playBurnSound();
+  createSparks();
+  const glow=document.getElementById('glow');
+  glow.style.opacity=1;
+  glow.style.animation='burnInward 1.5s ease-out forwards';
+  setTimeout(()=>{
+    const fireText=document.getElementById('fireText');
+    fireText.style.animation='fadeText 1.3s ease forwards';
+  },1500);
+  setTimeout(()=>{window.location.href='main.html';},2800);
+}
+document.getElementById('ignite').addEventListener('click',ignite);
+</script>
+</body>
+</html>
