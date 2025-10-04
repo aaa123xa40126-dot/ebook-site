@@ -157,4 +157,83 @@ function ignite(){
 document.getElementById('ignite').addEventListener('click', ignite);
 </script>
 </body>
+  <style>
+button {
+  background-color: transparent;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  font-family: "DFKai-SB", "Times New Roman", serif;
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 10;
+}
+
+button:hover {
+  background-color: var(--orange);
+  color: black;
+  box-shadow: 0 0 20px var(--orange);
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const button = document.querySelector("button");
+
+  if (!button) return; // 保險：防止找不到按鈕
+
+  button.addEventListener("click", function() {
+    // 動畫開始
+    const burnEffect = document.createElement("div");
+    burnEffect.style.position = "fixed";
+    burnEffect.style.top = 0;
+    burnEffect.style.left = 0;
+    burnEffect.style.width = "100vw";
+    burnEffect.style.height = "100vh";
+    burnEffect.style.background = "radial-gradient(circle, rgba(255,220,150,1) 0%, rgba(0,0,0,1) 80%)";
+    burnEffect.style.animation = "burn 1.5s forwards";
+    burnEffect.style.zIndex = 9999;
+    document.body.appendChild(burnEffect);
+
+    // 顯示文字
+    const text = document.createElement("div");
+    text.innerText = "火種被點燃了....";
+    text.style.position = "fixed";
+    text.style.top = "50%";
+    text.style.left = "50%";
+    text.style.transform = "translate(-50%, -50%)";
+    text.style.color = "#ffb050";
+    text.style.fontFamily = "'DFKai-SB','Times New Roman',serif";
+    text.style.fontSize = "1.8rem";
+    text.style.opacity = 0;
+    text.style.transition = "opacity 1s ease";
+    document.body.appendChild(text);
+
+    setTimeout(() => {
+      text.style.opacity = 1;
+    }, 600);
+
+    // 跳轉
+    setTimeout(() => {
+      window.location.href = "main.html";
+    }, 2200);
+  });
+});
+
+@keyframes burn {
+  0% {
+    clip-path: circle(100% at center);
+    opacity: 1;
+  }
+  100% {
+    clip-path: circle(0% at center);
+    opacity: 0;
+    background: rgba(0, 0, 0, 1);
+  }
+}
+</script>
+
 </html>
