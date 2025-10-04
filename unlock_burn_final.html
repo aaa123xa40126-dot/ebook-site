@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>火種解鎖儀式・最終版</title>
+<title>火種解鎖儀式・穩定互動版</title>
 <style>
 :root{
   --orange:#ffb86b;
@@ -16,9 +16,7 @@ html,body{
   font-family:'DFKai-SB','標楷體','Times New Roman',Times,serif;
   overflow:hidden;
 }
-.wrap{
-  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;
-}
+.wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;}
 .panel{
   width:min(720px,92%);
   border:1px solid var(--orange);
@@ -41,15 +39,8 @@ html,body{
   padding:10px 20px;border-radius:12px;color:var(--orange);
   text-decoration:none;cursor:pointer;transition:all .2s ease;
 }
-.btn:hover{
-  color:var(--gold);
-  box-shadow:0 0 14px rgba(255,184,107,.55), inset 0 0 8px rgba(255,184,107,.18);
-}
-#burnLayer{
-  position:fixed;inset:0;pointer-events:none;z-index:5;
-  background:#000;
-  mix-blend-mode:lighten;
-}
+.btn:hover{color:var(--gold);box-shadow:0 0 14px rgba(255,184,107,.55), inset 0 0 8px rgba(255,184,107,.18);}
+#burnLayer{position:fixed;inset:0;pointer-events:none;z-index:5;background:#000;mix-blend-mode:lighten;}
 .glow{
   position:absolute;inset:0;
   background:radial-gradient(circle at 50% 50%,rgba(255,184,107,0.3) 60%,rgba(0,0,0,1) 100%);
@@ -60,7 +51,11 @@ html,body{
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:1.6rem;color:var(--orange2);
   opacity:0;z-index:20;
-  animation: none;
+  animation:none;
+}
+.flash{
+  position:fixed;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,200,0.8),rgba(255,255,200,0));
+  opacity:0;pointer-events:none;z-index:15;
 }
 @keyframes burnInward{
   0%{clip-path:circle(120% at 50% 50%);opacity:1;}
@@ -69,10 +64,8 @@ html,body{
 }
 @keyframes fadeText{0%{opacity:0;}20%{opacity:1;}100%{opacity:0;}}
 @keyframes fadeOutAll{from{opacity:1;}to{opacity:0;}}
-.spark{
-  position:absolute;width:3px;height:3px;border-radius:50%;
-  opacity:0;
-}
+@keyframes flashAnim{0%{opacity:0;}20%{opacity:.9;}100%{opacity:0;}}
+.spark{position:absolute;width:3px;height:3px;border-radius:50%;opacity:0;}
 @keyframes sparkMove{
   0%{transform:translate(var(--sx),var(--sy)) scale(1);opacity:0;}
   10%{opacity:1;}
@@ -93,44 +86,43 @@ html,body{
   <div class="glow" id="glow"></div>
 </div>
 <div id="fireText" class="fireText">火種被點燃了....</div>
+<div id="flash" class="flash"></div>
 
 <script>
-let ctx;
-function playBurnSound(){
-  if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
-  const dur=1.5,sr=ctx.sampleRate,len=sr*dur,buf=ctx.createBuffer(1,len,sr),d=buf.getChannelData(0);
-  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*0.2;
-  for(let k=0;k<70;k++){
-    const p=Math.floor(Math.random()*len);
-    const w=Math.floor(sr*(0.002+Math.random()*0.004));
-    const a=0.6+Math.random()*0.8;
-    for(let i=0;i<w&&p+i<len;i++){
-      const e=Math.exp(-i/(w*0.6));
-      d[p+i]+=a*e;
-    }
-  }
-  const src=ctx.createBufferSource();src.buffer=buf;
-  const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=2300;f.Q.value=1.2;
-  const g=ctx.createGain();const now=ctx.currentTime;
-  g.gain.setValueAtTime(0.0001,now);
-  g.gain.exponentialRampToValueAtTime(0.8,now+0.1);
-  g.gain.exponentialRampToValueAtTime(0.3,now+1.2);
-  g.gain.exponentialRampToValueAtTime(0.0001,now+dur);
-  src.connect(f);f.connect(g);g.connect(ctx.destination);src.start();
+let audioCtx = null;
+function safePlaySound(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtx;
+    const dur = 1.5, sr = ctx.sampleRate, len = sr * dur;
+    const buf = ctx.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*0.2;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filter = ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=2300; filter.Q.value=1.2;
+    const gain = ctx.createGain(); const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.8, now+0.1);
+    gain.gain.exponentialRampToValueAtTime(0.3, now+1.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination); src.start();
 
-  // 呼氣音
-  const osc=ctx.createOscillator();
-  const g2=ctx.createGain();
-  osc.frequency.setValueAtTime(80,now+1.2);
-  osc.frequency.exponentialRampToValueAtTime(20,now+1.5);
-  g2.gain.setValueAtTime(0.3,now+1.2);
-  g2.gain.exponentialRampToValueAtTime(0.0001,now+1.5);
-  osc.connect(g2);g2.connect(ctx.destination);osc.start(now+1.2);osc.stop(now+1.6);
+    // 呼氣音
+    const osc = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc.frequency.setValueAtTime(80, now+1.2);
+    osc.frequency.exponentialRampToValueAtTime(20, now+1.5);
+    g2.gain.setValueAtTime(0.3, now+1.2);
+    g2.gain.exponentialRampToValueAtTime(0.0001, now+1.5);
+    osc.connect(g2); g2.connect(ctx.destination); osc.start(now+1.2); osc.stop(now+1.6);
+  }catch(e){
+    console.warn("音效初始化失敗", e);
+  }
 }
 
 function createSparks(){
-  const layer=document.getElementById('burnLayer');
-  for(let i=0;i<100;i++){
+  const layer = document.getElementById('burnLayer');
+  for(let i=0;i<80;i++){
     const s=document.createElement('div');s.className='spark';
     const angle=Math.random()*2*Math.PI;
     const dist=window.innerWidth*0.6;
@@ -147,8 +139,10 @@ function createSparks(){
 }
 
 function ignite(){
+  const flash=document.getElementById('flash');
+  flash.style.animation='flashAnim 0.5s ease-out';
   document.getElementById('panel').style.animation='fadeOutAll 0.6s ease forwards';
-  playBurnSound();
+  safePlaySound();
   createSparks();
   const glow=document.getElementById('glow');
   glow.style.opacity=1;
@@ -159,7 +153,8 @@ function ignite(){
   },1500);
   setTimeout(()=>{window.location.href='main.html';},2800);
 }
-document.getElementById('ignite').addEventListener('click',ignite);
+
+document.getElementById('ignite').addEventListener('click', ignite);
 </script>
 </body>
 </html>
