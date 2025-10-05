@@ -26,7 +26,8 @@ function bindLogout(){
     }catch(e){ console.warn(e); }
     // clean legacy state
     try{ localStorage.clear(); }catch(e){}
-    window.location.href = 'login.html';
+    localStorage.removeItem("fire_unlocked");
+    window.location.href = "login.html";
   });
 }
 
@@ -36,7 +37,8 @@ function guard(){
     if(!user){
       try{ localStorage.setItem('loggedIn','false'); localStorage.removeItem('user'); }catch(e){}
       if(!location.pathname.endsWith('login.html') && !location.pathname.endsWith('register.html')){
-        window.location.href = 'login.html';
+        localStorage.removeItem("fire_unlocked");
+    window.location.href = "login.html";
       }
       return;
     }
