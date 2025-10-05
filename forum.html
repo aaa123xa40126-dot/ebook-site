@@ -1,89 +1,66 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
+<script>
+(function(){
+  try {
+    var unlocked = localStorage.getItem('fire_unlocked');
+    if (unlocked !== 'true' && unlocked !== true) {
+      window.stop();
+      window.location.replace('seal.html');
+      return;
+    }
+    // 若有後端驗證端點，取消註解以下程式碼
+    // fetch('/api/verify', {credentials:'include'}).then(function(r){
+    //   if(!r.ok) throw new Error('bad');
+    // }).catch(function(){ window.stop(); window.location.replace('seal.html'); });
+  } catch (e) {
+    window.stop();
+    window.location.replace('seal.html');
+  }
+})();
+</script>
+<noscript><meta http-equiv="refresh" content="0;url=seal.html"></noscript>
+
+<script>
+  try {
+    const unlocked = localStorage.getItem('fire_unlocked');
+    if (unlocked !== 'true') {
+      window.location.href = 'seal.html';
+    }
+  } catch (e) {
+    window.location.href = 'seal.html';
+  }
+</script>
+
+
+<script>
+  try {
+    const unlocked = localStorage.getItem('fire_unlocked');
+    if (unlocked !== 'true') {
+      window.location.href = 'seal.html';
+    }
+  } catch (e) {
+    window.location.href = 'seal.html';
+  }
+</script>
+
+
+<script>
+  try {
+    const unlocked = localStorage.getItem('fire_unlocked');
+    if (unlocked !== 'true') {
+      window.location.href = 'seal.html';
+    }
+  } catch (e) {
+    window.location.href = 'seal.html';
+  }
+</script>
+
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Forum</title>
-<style>
-  body{margin:0;font-family:'標楷體','Times New Roman',serif;background:#fff;color:#000}
-  header{padding:20px;text-align:left;font-size:2.6rem;color:#ff6600;text-shadow:0 0 8px rgba(255,100,0,.6)}
-  .top-bar{display:flex;justify-content:space-between;align-items:center;padding:0 30px}
-  nav{text-align:center;margin:10px 0 20px;font-size:1.3rem}
-  nav a{margin:0 18px;text-decoration:none;color:#333}
-  nav a.active{color:#ff6600;text-shadow:0 0 6px rgba(255,100,0,.6);font-weight:bold}
-  .user-right{display:flex;align-items:center;gap:10px}
-  .user-menu{position:relative;cursor:pointer}
-  .user-menu .avatar{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #ff6600}
-  .dropdown{position:absolute;right:0;top:50px;background:white;border:1px solid #ccc;padding:10px;border-radius:8px;display:none}
-  .dropdown.show{display:block}
-  .container{max-width:1100px;margin:0 auto;padding:20px}
-  .section{background:#f7f8fa;border:1px solid #e5e5e5;border-radius:12px;padding:18px;margin:16px 30px}
-  .section h2{margin:0 0 10px}
-  .btn{background:#ff6600;border:none;color:#fff;border-radius:10px;padding:10px 16px;cursor:pointer}
-  .btn:hover{filter:brightness(1.05)}
-</style>
 
-
-<style>
-/* --- Topic list & badges --- */
-.topic-list { padding: 10px 30px; }
-.topic-card { display:flex; justify-content:space-between; align-items:center;
-  border:1px solid #e5e5e5; border-radius:12px; padding:14px 16px; margin:10px 0; cursor:pointer; background:#fff; }
-.topic-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.06); }
-.topic-meta { display:flex; gap:14px; align-items:center; font-size:.95rem; color:#555; }
-.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.8rem; border:1px solid #ccc; }
-.badge.following { border-color:#ff6600; color:#ff6600; }
-.badge.unread { background:#e6f0ff; border-color:#a8c5ff; color:#2459c4; }
-
-/* --- Thread view --- */
-.thread { padding: 8px 30px 20px; }
-.thread-header { display:flex; align-items:center; gap:12px; }
-.btn.icon { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px; }
-.bell { font-size:1.1rem; }
-.bell.on { color:#ff6600; }
-
-/* --- Comments --- */
-.comment { border-bottom:1px solid #eee; padding:12px 0; }
-.comment .head { display:flex; align-items:center; gap:10px; }
-.comment .avatar { width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #ddd; }
-.comment .name { font-weight:bold; cursor:pointer; }
-.comment .actions { display:flex; gap:12px; font-size:.9rem; color:#555; margin-top:6px; }
-.comment .actions button { background:none; border:none; cursor:pointer; color:#555; }
-.comment .actions button:hover { color:#ff6600; }
-.comment .content { margin-top:6px; line-height:1.7; }
-.comment .meta { font-size:.85rem; color:#777; }
-.reply { margin-left:42px; border-left:2px solid #f0f0f0; padding-left:10px; }
-
-.unread-dot { width:8px; height:8px; background:#2b7cff; border-radius:50%; display:inline-block; margin-left:6px; }
-
-/* --- Editor --- */
-.editor { border:1px solid #e5e5e5; border-radius:12px; padding:0; overflow:hidden; background:#fff; }
-.toolbar { display:flex; gap:8px; padding:8px; border-bottom:1px solid #eee; background:#fafafa; }
-.tool-btn { background:#fff; border:1px solid #ddd; border-radius:8px; padding:6px 10px; cursor:pointer; }
-.tool-btn:hover { filter:brightness(1.03); }
-#emojiPanel { display:none; position:absolute; z-index:10; background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:8px; }
-#emojiPanel button { background:none; border:none; font-size:20px; cursor:pointer; padding:4px; }
-.editor-box { min-height:90px; padding:10px 12px; outline:none; }
-.editor-actions { display:flex; justify-content:flex-end; gap:10px; padding:10px; border-top:1px solid #eee; }
-
-/* --- Profile modal --- */
-.modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.35); }
-.modal .card { background:#fff; border-radius:14px; padding:18px; width:360px; box-shadow:0 10px 30px rgba(0,0,0,.2); }
-.modal .top { display:flex; align-items:center; gap:12px; }
-.modal .top img { width:56px; height:56px; border-radius:50%; border:2px solid #ff6600; object-fit:cover; }
-.modal .stats { display:flex; gap:16px; margin-top:10px; color:#555; }
-.modal .close { float:right; cursor:pointer; }
-
-/* --- Dark mode --- */
-:root { --bg:#fff; --fg:#000; --card:#fff; --muted:#555; }
-.dark { --bg:#0f1115; --fg:#e8e8e8; --card:#171a21; --muted:#b0b0b0; }
-body { background:var(--bg); color:var(--fg); }
-.section, .topic-card, .editor, .modal .card { background:var(--card); }
-.comment .actions button, .topic-meta { color:var(--muted); }
-
-/* --- Highlight for search --- */
-mark.hl { background:#fff2a8; padding:0 2px; border-radius:3px; }
-</style>
 
 
 <style>
@@ -168,11 +145,23 @@ mark.hl { background:#fff2a8; padding:0 2px; border-radius:3px; }
 </style>
 
 
-<link rel="stylesheet" href="firelock.css">
-<script src="firelock.js"></script>
-<script>window.Firelock && window.Firelock.init({home:"main.html", unlock:"unlock.html", message:"燃起心之火者，方能窺見此地的低語。"});</script>
 </head>
 <body>
+<script>
+(function(){
+  try {
+    var unlocked = localStorage.getItem('fire_unlocked');
+    if (unlocked !== 'true' && unlocked !== true) {
+      window.stop();
+      window.location.replace('seal.html');
+    }
+  } catch (e) {
+    window.stop();
+    window.location.replace('seal.html');
+  }
+})();
+</script>
+
 <div class="top-bar">
   <header>蒺藜女孩的低語</header>
   <div class="user-right">
@@ -262,10 +251,7 @@ mark.hl { background:#fff2a8; padding:0 2px; border-radius:3px; }
 </section>
 
 <!-- Profile modal -->
-<div class="modal" id="profileModal" role="dialog" aria-hidden="true">
-  <div class="card">
-    <div class="close" id="profileClose">✕</div>
-    <div class="top">
+<div class="top">
       <img id="pfAvatar" src="default-avatar.png" alt="頭像">
       <div>
         <div id="pfName" style="font-weight:bold;font-size:1.2rem"></div>
@@ -860,29 +846,15 @@ document.getElementById("newThreadBtn").addEventListener("click", function(){
 </script>
 
 
-<script src="auth-guard.js"></script>
+
 <script>
-  Auth.routeGuard({
-    needLogin: true,
-    needBuyer: true,
-    onBlocked: (reason) => {
-      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
-      else Auth.mountOverlay("not_buyer");
-    }
-  });
+  
 </script>
 
 
-<script src="auth-guard.js"></script>
+
 <script>
-  Auth.routeGuard({
-    needLogin: true,
-    needBuyer: true,
-    onBlocked: (reason) => {
-      if (reason === "not_logged_in") Auth.mountOverlay("not_logged_in");
-      else if (reason === "not_buyer") Auth.mountOverlay("not_buyer");
-    }
-  });
+  
 </script>
 
   <script type="module" src="firebase-init.js"></script>
